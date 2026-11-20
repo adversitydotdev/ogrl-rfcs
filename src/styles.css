@@ -418,6 +418,59 @@ a:hover {
   padding-top: 0.2rem;
 }
 
+/* Pronunciation Callout */
+.pronounce-card {
+  border: 1px solid var(--border);
+  border-radius: 0.65rem;
+  padding: 1.25rem 1.4rem;
+  background: var(--surface);
+}
+
+.pronounce-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.65rem 0.9rem;
+  margin-bottom: 0.45rem;
+}
+
+.pronounce-word {
+  font-family: var(--font-display);
+  font-size: 1.45rem;
+  font-weight: 400;
+  line-height: 1.2;
+  color: var(--fg);
+}
+
+.pronounce-respell {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 1.15rem;
+  color: var(--accent);
+}
+
+.pronounce-ipa {
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  color: var(--fg-muted);
+  padding: 0.1rem 0.5rem;
+  border-radius: 0.35rem;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-subtle);
+}
+
+.pronounce-note {
+  margin: 0;
+  font-size: 0.94rem;
+  color: var(--fg-muted);
+  max-width: 64ch;
+}
+
+.pronounce-note strong {
+  color: var(--fg);
+  font-weight: 500;
+}
+
 /* Status Pill */
 .status-pill {
   display: inline-flex;

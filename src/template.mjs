@@ -178,6 +178,19 @@ export function renderIndexPage(rfcs, catalog = null) {
   </section>`
     : "";
 
+  const pronunciationSection = `<h2 class="section-heading section-heading--spaced">Pronunciation</h2>
+  <section class="pronounce-card" aria-label="How to pronounce OGRL">
+    <div class="pronounce-head">
+      <span class="pronounce-word">OGRL</span>
+      <span class="pronounce-respell">&ldquo;oh-girl&rdquo;</span>
+      <span class="pronounce-ipa">/&#x02C8;o&#x028A;.&#x0261;&#x025C;&#x02D0;rl/</span>
+    </div>
+    <p class="pronounce-note">
+      Short for <strong>Open GRC Language</strong>. Pronounced as a two-syllable word&mdash;<em>oh-girl</em>&mdash;rather
+      than spelled out letter by letter.
+    </p>
+  </section>`;
+
   const body = `<section class="hero-band">
   <div class="hero-inner">
     <p class="eyebrow">Open GRC Language · Request for Comments</p>
@@ -196,6 +209,7 @@ export function renderIndexPage(rfcs, catalog = null) {
     ${rows}
   </section>
   ${libraryCallout}
+  ${pronunciationSection}
 </main>`;
 
   return renderShell({
