@@ -3,7 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { Marked } from "marked";
 import { renderFigure } from "../src/diagrams.mjs";
-import { renderIndexPage, renderRfcPage } from "../src/template.mjs";
+import { renderIndexPage, renderNotFoundPage, renderRfcPage } from "../src/template.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "..");
@@ -282,6 +282,7 @@ export function build() {
   fs.copyFileSync(path.join(SRC_DIR, "client.js"), path.join(DIST_DIR, "assets", "client.js"));
 
   fs.writeFileSync(path.join(DIST_DIR, "index.html"), renderIndexPage(rfcs), "utf-8");
+  fs.writeFileSync(path.join(DIST_DIR, "404.html"), renderNotFoundPage(rfcs), "utf-8");
 
   rfcs.forEach((rfc, index) => {
     const dir = path.join(DIST_DIR, "rfcs", rfc.slug);

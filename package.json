@@ -6,7 +6,8 @@
   "description": "OGRL (Open GRC Language) Request for Comments specification site.",
   "scripts": {
     "build": "node scripts/build.mjs",
-    "dev": "node scripts/dev.mjs"
+    "dev": "node scripts/dev.mjs",
+    "deploy": "node scripts/build.mjs && wrangler deploy"
   },
   "devDependencies": {
     "marked": "^15.0.7"

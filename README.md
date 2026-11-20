@@ -13,6 +13,7 @@ Request for Comments specifications for **OGRL** (*Open GRC Language*).
 pnpm install
 pnpm dev      # builds and serves on http://localhost:4173 with file watching
 pnpm build    # generates static site in dist/
+pnpm deploy   # builds and deploys to Cloudflare Workers (ogrl.adversity.dev)
 ```
 
 The build compiles `rfcs/*.md` into static HTML under `dist/` (including raw Markdown copies at `dist/rfcs/*.md`) and verifies that every internal and cross-RFC anchor link resolves.

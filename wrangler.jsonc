@@ -1,0 +1,15 @@
+{
+  "name": "ogrl-rfcs",
+  "compatibility_date": "2026-11-19",
+  "assets": {
+    "directory": "./dist",
+    "html_handling": "auto-trailing-slash",
+    "not_found_handling": "404-page"
+  },
+  "routes": [
+    {
+      "pattern": "ogrl.adversity.dev",
+      "custom_domain": true
+    }
+  ]
+}

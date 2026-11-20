@@ -262,3 +262,24 @@ export function renderRfcPage(rfc, rfcs, index) {
     body,
   });
 }
+
+export function renderNotFoundPage(rfcs) {
+  const body = `<section class="hero-band">
+  <div class="hero-inner">
+    <p class="eyebrow">404 · Not Found</p>
+    <h1 class="hero-title">Specification not found.</h1>
+    <p class="hero-lede">
+      The requested RFC or path does not exist. Return to the <a href="/">RFC index</a> to browse
+      published OGRL specifications.
+    </p>
+  </div>
+</section>`;
+
+  return renderShell({
+    title: "404 · OGRL RFCs",
+    description: "Page not found.",
+    rfcs,
+    currentSlug: null,
+    body,
+  });
+}
