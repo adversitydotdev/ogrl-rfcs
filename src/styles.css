@@ -1616,6 +1616,32 @@ a:hover {
   background: var(--oos-soft);
 }
 
+.lib-tag--reviewed {
+  color: var(--contribution-ink);
+  background: var(--contribution-soft);
+  border-color: color-mix(in oklch, var(--contribution) 30%, transparent);
+}
+
+.lib-baseline-card {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  border: 1px solid var(--border);
+  border-radius: 0.65rem;
+  padding: 1rem 1.15rem;
+  background: var(--surface);
+  transition: border-color 140ms ease, transform 140ms ease;
+}
+
+.lib-baseline-card:hover {
+  border-color: var(--fg-faint);
+  transform: translateY(-1px);
+}
+
+.lib-controls-list {
+  margin-bottom: 2.25rem;
+}
+
 .lib-item-body {
   border-top: 1px solid var(--border-subtle);
   padding: 0.85rem 1rem 1rem;

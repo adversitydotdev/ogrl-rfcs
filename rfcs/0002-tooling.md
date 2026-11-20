@@ -13,7 +13,7 @@ While [RFC 0001](0001-object-model.md) defines the OGRL object model, an interop
 
 An OGRL deployment separates authority cleanly across three domains:
 
-1. **The OGRL repository** is the source of truth for the shared standard library—frameworks, requirements, standard controls, standard mappings, library baselines, and library tests. Organizations pull pinned revisions of this library forward into their own databases.
+1. **The OGRL library repository** (`adversitydotdev/ogrl-library`) is the source of truth for the shared standard library—frameworks, requirements, standard controls, standard mappings, library baselines, and library tests. Organizations pull pinned revisions of this library forward into their own databases.
 2. **Provider publications** are the source of truth for vendor-supplied control bundles—identifying a cloud or software service and the controls it inherits, shares, or delegates to customers (for instance, a Microsoft 365 responsibility matrix or the [CivicActions Django OSCAL component definition](https://github.com/CivicActions/oscal-component-definitions/tree/main/django)). Organizations import pinned revisions of these bundles without editing them.
 3. **The organization's database** is the system of record for that organization's live security program—implementations, parameter values, test results, evidence metadata, policies, procedures, findings, risks, exceptions, and mapping reviews.
 
@@ -308,13 +308,14 @@ Like Git snapshots, OSCAL packages are strictly read-only renders—editing expo
 
 | Tool | Data flow | Implementation status |
 |---|---|---|
-| `ogrl import` | Upstream OSCAL catalogs → `library/` files in the OGRL repo | Built (emits statements, parts, parameters, and draft mappings; adding assessment objectives is next). Distinct from organization pulls. |
-| Library pull | OGRL repo revision → organization database | Specified in [Section 5](#5-library-pull). |
+| `ogrl` CLI & `ogrl_rs` ([`ogrl-rs`](https://github.com/adversitydotdev/ogrl-rs)) | Strict YAML 1.2 `lint` / `fmt`, `bundle pack` / `unpack` / `digest`, `eval`, `diff`, `import nist` / `oscal` / `oscal-component`, `render oscal` / `ssp` | Built and released (`v0.1.0` standalone binaries and `cp313-abi3` Python wheels). |
+| Standard library ([`ogrl-library`](https://github.com/adversitydotdev/ogrl-library)) | Pinned NIST SP 800-53 r5 & SP 800-171 r3 catalogs (with assessment objectives), citation-only frameworks, standard controls, tests, reviewed crosswalks, and baselines | Published (`library-v0.2.0`); browsable at [`ogrl.adversity.dev/library`](https://ogrl.adversity.dev/library/). |
+| Library pull | `ogrl-library` revision → organization database | Built in the reference platform ([Section 5](#5-library-pull)). |
 | Application & API | Organization database ↔ UI and API clients | Application-specific; reads and writes organization objects only without mutating library or provider projections. |
 | Export job | Organization database → organization Git repo | Specified in [Section 8](#8-git-export). |
 | Restore | Organization snapshot → empty organization database | Specified in [Section 8.1](#81-restore). |
-| OSCAL export | Organization database + pinned library → full OSCAL 1.2.3 package | Specified in [Section 9](#9-oscal-export); shared by Git export and direct downloads. |
-| Provider import | Provider bundle or OSCAL component definition → organization database | Specified in [Section 7](#7-provider-bundles). |
+| OSCAL export | Organization database + pinned library → full OSCAL 1.2.3 package (JSON + XML) | Built in `ogrl-rs` (`ogrl render oscal` / `ogrl_rs.render_oscal`); shared by Git export and direct downloads ([Section 9](#9-oscal-export)). |
+| Provider import | Provider bundle or OSCAL component definition (JSON + XML) → organization database | Built in `ogrl-rs` (`ogrl import oscal-component` / `OgrlGraph.import_oscal_component`) ([Section 7](#7-provider-bundles)). |
 
 The test harness from RFC 0001 executes `test.run` blocks and persists emitted `result` (including `objective_refs`) and `evidence` objects directly into the organization database without touching Git; the scheduled export job picks them up on its next cycle.
 

@@ -85,8 +85,8 @@ function renderShell({ title, description, rfcs, currentSlug, activeNav = "index
 
 export function renderIndexPage(rfcs, catalog = null) {
   const libRole = catalog
-    ? `${catalog.counts.frameworks} frameworks, ${catalog.counts.requirements.toLocaleString("en-US")} requirements, ${catalog.counts.objectives.toLocaleString("en-US")} assessment objectives, and ${catalog.counts.mappings.toLocaleString("en-US")} draft mappings.`
-    : "Shared NIST frameworks, requirements, assessment objectives, and crosswalk mappings.";
+    ? `${catalog.counts.frameworks} frameworks, ${catalog.counts.controls || 0} standard controls, ${catalog.counts.baselines || 0} baselines, ${catalog.counts.requirements.toLocaleString("en-US")} requirements, and ${catalog.counts.objectives.toLocaleString("en-US")} assessment objectives.`
+    : "Shared frameworks, standard controls, baselines, requirements, assessment objectives, and crosswalk mappings.";
 
   const layers = [
     {
@@ -158,10 +158,12 @@ export function renderIndexPage(rfcs, catalog = null) {
       <div>
         <h2 class="rfc-row-title"><a href="/library/">OGRL Control &amp; Framework Catalog</a></h2>
         <p class="rfc-row-summary">
-          Browse ${catalog.counts.requirements.toLocaleString("en-US")} normalized requirements and
+          Browse ${catalog.counts.controls || 0} standard OGRL controls, ${catalog.counts.baselines || 0} starter
+          baselines, ${catalog.counts.requirements.toLocaleString("en-US")} requirements, and
           ${catalog.counts.objectives.toLocaleString("en-US")} NIST assessment objectives across
-          ${catalog.frameworks.map((f) => esc(f.name)).join(" and ")}, compiled from pinned OSCAL 1.2.3
-          catalogs with ${catalog.counts.mappings.toLocaleString("en-US")} draft crosswalk mappings.
+          ${catalog.frameworks.map((f) => esc(f.name)).join(", ")}, with
+          ${catalog.counts.reviewed_mappings || 0} reviewed control crosswalks and
+          ${catalog.counts.draft_mappings ?? catalog.counts.mappings} draft links.
         </p>
         <div class="rfc-row-meta">
           <span class="status-pill">${esc(catalog.bundle.id)}</span>
@@ -224,16 +226,26 @@ export function renderIndexPage(rfcs, catalog = null) {
 }
 
 export function renderLibraryPage(rfcs, catalog) {
-  const { bundle, counts, frameworks } = catalog;
+  const { bundle, counts, frameworks, baselines = [], controls = [] } = catalog;
   const shortDigest = bundle.digest ? `${bundle.digest.slice(0, 20)}…` : "";
+  const repoBase = bundle.repo_url.replace(/\/$/, "");
 
   const metaItems = [
     { label: "Bundle", html: `<code>${esc(bundle.id)}</code>` },
     { label: "Version", html: esc(bundle.version) },
-    { label: "Spec version", html: esc(bundle.spec_version) },
-    { label: "Requirements", html: `${counts.requirements.toLocaleString("en-US")} (${counts.withdrawn_requirements} withdrawn)` },
-    { label: "Assessment objectives", html: counts.objectives.toLocaleString("en-US") },
-    { label: "Draft mappings", html: counts.mappings.toLocaleString("en-US") },
+    { label: "Frameworks", html: String(counts.frameworks) },
+    { label: "Standard controls", html: String(counts.controls || 0) },
+    { label: "Baselines", html: String(counts.baselines || 0) },
+    { label: "Library tests", html: String(counts.tests || 0) },
+    {
+      label: "Requirements",
+      html: `${counts.requirements.toLocaleString("en-US")} (${counts.withdrawn_requirements} withdrawn)`,
+    },
+    { label: "Objectives", html: counts.objectives.toLocaleString("en-US") },
+    {
+      label: "Mappings",
+      html: `${counts.mappings.toLocaleString("en-US")} (${counts.reviewed_mappings || 0} reviewed)`,
+    },
   ];
   if (shortDigest) {
     metaItems.push({
@@ -254,12 +266,112 @@ export function renderLibraryPage(rfcs, catalog) {
   <div class="lib-fw-id"><code>${esc(fw.id)}</code></div>
   <div class="lib-fw-stats">
     <span><strong>${fw.active_count.toLocaleString("en-US")}</strong> active</span>
-    <span><strong>${fw.withdrawn_count}</strong> withdrawn</span>
-    <span><strong>${fw.objective_count.toLocaleString("en-US")}</strong> objectives</span>
+    ${fw.withdrawn_count > 0 ? `<span><strong>${fw.withdrawn_count}</strong> withdrawn</span>` : ""}
+    ${fw.objective_count > 0 ? `<span><strong>${fw.objective_count.toLocaleString("en-US")}</strong> objectives</span>` : ""}
     <span><strong>${fw.mapping_count}</strong> mappings</span>
   </div>
-  ${srcCommit ? `<div class="lib-fw-source">OSCAL commit <code>${esc(srcCommit)}</code></div>` : ""}
+  ${srcCommit ? `<div class="lib-fw-source">OSCAL commit <code>${esc(srcCommit)}</code></div>` : `<div class="lib-fw-source">Citation-only identifiers (RFC 0001 §10)</div>`}
 </button>`;
+    })
+    .join("\n");
+
+  const baselineCards = baselines
+    .map((b) => {
+      const yamlHref = `${repoBase}/blob/main/${b.yaml_path}`;
+      return `<a class="lib-baseline-card" href="${esc(yamlHref)}" target="_blank" rel="noopener noreferrer">
+  <div class="lib-fw-top">
+    <span class="layer-step">Library baseline</span>
+    <span class="lib-tag">${b.control_refs.length} controls</span>
+  </div>
+  <div class="lib-fw-name">${esc(b.name)}</div>
+  <div class="lib-fw-id"><code>${esc(b.id)}</code></div>
+  <div class="lib-fw-stats">
+    <span><strong>${b.framework_refs.length}</strong> framework(s)</span>
+    ${b.requirement_refs.length > 0 ? `<span><strong>${b.requirement_refs.length}</strong> pinned requirements</span>` : `<span>Multi-framework core</span>`}
+  </div>
+</a>`;
+    })
+    .join("\n");
+
+  const controlRows = controls
+    .map((c) => {
+      const yamlHref = `${repoBase}/blob/main/${c.yaml_path}`;
+      const paramEntries = Object.entries(c.parameters || {});
+      const paramsHtml =
+        paramEntries.length > 0
+          ? `<div class="lib-detail-section">
+              <h4>Parameters (${paramEntries.length})</h4>
+              <ul class="lib-parts">${paramEntries
+                .map(
+                  ([k, v]) =>
+                    `<li><code>{{ ${esc(k)} }}</code> — ${esc(v.label || k)}${v.value ? ` (default: <em>${esc(v.value)}</em>)` : ""}</li>`,
+                )
+                .join("")}</ul>
+            </div>`
+          : "";
+
+      const testsHtml =
+        c.tests.length > 0
+          ? `<div class="lib-detail-section">
+              <h4>Library tests (${c.tests.length})</h4>
+              <ul class="lib-parts">${c.tests
+                .map(
+                  (t) =>
+                    `<li><code>${esc(t.method)}</code>${t.interval ? ` · <code>${esc(t.interval)}</code>` : ""}${t.required ? ` · <span class="lib-tag lib-tag--active">required</span>` : ""} — <strong>${esc(t.name)}</strong>${t.description ? `: ${esc(t.description)}` : ""}</li>`,
+                )
+                .join("")}</ul>
+            </div>`
+          : "";
+
+      const mapsHtml =
+        c.mappings.length > 0
+          ? `<div class="lib-detail-section">
+              <h4>Reviewed framework crosswalks (${c.mappings.length})</h4>
+              <ul class="lib-parts">${c.mappings
+                .map((m) => {
+                  const pmap = m.parameter_map
+                    ? ` <span class="lib-more-note">(maps ${Object.entries(m.parameter_map)
+                        .map(([rk, ck]) => `${rk}←${ck}`)
+                        .join(", ")})</span>`
+                    : "";
+                  return `<li><code>${esc(m.relationship)}</code> → <code>${esc(m.target_ref)}</code> <span class="lib-tag lib-tag--reviewed">${esc(m.review_status)}</span>${pmap}</li>`;
+                })
+                .join("")}</ul>
+            </div>`
+          : "";
+
+      return `<details class="lib-item">
+  <summary class="lib-item-summary">
+    <span class="lib-item-id">${esc(c.display_id)}</span>
+    <span class="lib-item-name">${esc(c.name)}</span>
+    <span class="lib-item-badges">
+      ${c.family ? `<span class="lib-tag">${esc(c.family)}</span>` : ""}
+      ${c.control_type ? `<span class="lib-tag">${esc(c.control_type)}</span>` : ""}
+      ${c.frequency ? `<span class="lib-tag">${esc(c.frequency)}</span>` : ""}
+      <span class="lib-tag lib-tag--reviewed">${c.mappings.length} crosswalks</span>
+    </span>
+  </summary>
+  <div class="lib-item-body">
+    <div class="lib-item-meta">
+      <code>${esc(c.id)}</code>
+      <span>origin: standard</span>
+      <span>${c.tests.length} test(s)</span>
+      <a href="${esc(yamlHref)}" target="_blank" rel="noopener noreferrer">View YAML in ogrl-library ↗</a>
+    </div>
+    <div class="lib-detail-section">
+      <h4>Control statement</h4>
+      <p>${esc(c.statement)}</p>
+    </div>
+    <div class="lib-detail-section">
+      <h4>Objective</h4>
+      <p>${esc(c.objective)}</p>
+    </div>
+    ${c.guidance ? `<div class="lib-detail-section"><h4>Implementation guidance</h4><p>${esc(c.guidance)}</p></div>` : ""}
+    ${paramsHtml}
+    ${testsHtml}
+    ${mapsHtml}
+  </div>
+</details>`;
     })
     .join("\n");
 
@@ -268,8 +380,8 @@ export function renderLibraryPage(rfcs, catalog) {
     <p class="eyebrow">OGRL Standard Library · ${esc(bundle.id)}</p>
     <h1 class="hero-title">Open framework &amp; control catalog.</h1>
     <p class="hero-lede">
-      Normalized requirements, statement parts, parameters, NIST assessment objectives, and draft
-      crosswalk mappings compiled from pinned upstream OSCAL 1.2.3 catalogs. Authoritative YAML
+      Standard operational controls, starter baselines, library tests, reviewed multi-framework
+      crosswalks, and normalized requirements with NIST assessment objectives. Authoritative YAML
       sources live in <a href="${esc(bundle.repo_url)}" target="_blank" rel="noopener noreferrer">ogrl-library</a>
       and are built and validated by <a href="${esc(bundle.tools_repo_url)}" target="_blank" rel="noopener noreferrer">ogrl-rs</a>.
     </p>
@@ -296,13 +408,31 @@ export function renderLibraryPage(rfcs, catalog) {
     ${fwCards}
   </section>
 
-  <h2 class="section-heading">Requirement Explorer</h2>
+  ${
+    baselines.length > 0
+      ? `<h2 class="section-heading section-heading--spaced">Starter Baselines (${baselines.length})</h2>
+  <section class="lib-fw-grid" aria-label="Library baselines">
+    ${baselineCards}
+  </section>`
+      : ""
+  }
+
+  ${
+    controls.length > 0
+      ? `<h2 class="section-heading section-heading--spaced">Standard Controls (${controls.length})</h2>
+  <div class="lib-list lib-controls-list" aria-label="Standard OGRL controls">
+    ${controlRows}
+  </div>`
+      : ""
+  }
+
+  <h2 class="section-heading section-heading--spaced">Requirement Explorer</h2>
   <section class="lib-controls" aria-label="Filter requirements">
     <input
       type="search"
       class="lib-search"
       data-lib-search
-      placeholder="Search by ID, title, or prose (e.g. AC-2, 03.01.01, encryption, multifactor)…"
+      placeholder="Search by ID, title, or prose (e.g. AC-2, CC6.1, A.8.5, 03.01.01, encryption)…"
       aria-label="Search requirements"
     />
     <div class="lib-filter-group" role="group" aria-label="Framework filter">
@@ -333,7 +463,7 @@ export function renderLibraryPage(rfcs, catalog) {
 
   return renderShell({
     title: "OGRL Standard Library Catalog — Open GRC Language",
-    description: `Browse ${counts.requirements} normalized requirements and ${counts.objectives} assessment objectives in the OGRL Standard Library.`,
+    description: `Browse ${counts.controls || 0} standard controls, ${counts.baselines || 0} baselines, ${counts.requirements} requirements, and ${counts.objectives} assessment objectives in the OGRL Standard Library.`,
     rfcs,
     currentSlug: null,
     activeNav: "library",

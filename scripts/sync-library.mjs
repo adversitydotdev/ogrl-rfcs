@@ -50,8 +50,14 @@ export function syncLibrary() {
 
     const frameworksById = new Map();
     const mappingsBySource = new Map();
+    const mappingsByTargetBase = new Map();
+    const testsByControl = new Map();
     const requirements = [];
+    const controls = [];
+    const baselines = [];
     let totalMappings = 0;
+    let reviewedMappings = 0;
+    let totalTests = 0;
 
     for (const obj of objects) {
       if (obj.type === "framework") {
@@ -72,14 +78,41 @@ export function syncLibrary() {
         });
       } else if (obj.type === "mapping") {
         totalMappings += 1;
-        const list = mappingsBySource.get(obj.source_ref) || [];
-        list.push({
+        const reviewStatus = obj.review_status || "draft";
+        if (reviewStatus === "reviewed") reviewedMappings += 1;
+        const entry = {
           id: obj.id,
+          source_ref: obj.source_ref,
           target_ref: obj.target_ref,
           relationship: obj.relationship,
-          review_status: obj.review_status || "draft",
+          review_status: reviewStatus,
+          parameter_map: obj.parameter_map || null,
+          summary: obj.summary || null,
+        };
+        const outList = mappingsBySource.get(obj.source_ref) || [];
+        outList.push(entry);
+        mappingsBySource.set(obj.source_ref, outList);
+
+        const targetBase = obj.target_ref.split("#")[0];
+        const inList = mappingsByTargetBase.get(targetBase) || [];
+        inList.push(entry);
+        mappingsByTargetBase.set(targetBase, inList);
+      } else if (obj.type === "test") {
+        totalTests += 1;
+        const slug = obj.id.replace(/^test--/, "");
+        const list = testsByControl.get(obj.control_ref) || [];
+        list.push({
+          id: obj.id,
+          slug,
+          name: obj.name,
+          method: obj.method,
+          interval: obj.interval || null,
+          required: Boolean(obj.required),
+          description: obj.description || null,
+          objective_refs: obj.objective_refs || [],
+          yaml_path: `library/test/${slug}.yaml`,
         });
-        mappingsBySource.set(obj.source_ref, list);
+        testsByControl.set(obj.control_ref, list);
       }
     }
 
@@ -87,48 +120,92 @@ export function syncLibrary() {
     let withdrawnCount = 0;
 
     for (const obj of objects) {
-      if (obj.type !== "requirement") continue;
-      const fw = frameworksById.get(obj.framework_ref);
-      const fwSlug = obj.framework_ref.replace(/^framework--/, "");
-      const localSlug = obj.id.replace(`requirement--${fwSlug}-`, "");
-      const objCount = Array.isArray(obj.objectives) ? obj.objectives.length : 0;
-      const parts = Array.isArray(obj.parts)
-        ? obj.parts.map((p) => ({ id: p.id, statement: p.statement }))
-        : [];
-      const paramsCount = obj.parameters ? Object.keys(obj.parameters).length : 0;
-      const mappings = mappingsBySource.get(obj.id) || [];
-      const withdrawn = Boolean(obj.withdrawn);
+      if (obj.type === "requirement") {
+        const fw = frameworksById.get(obj.framework_ref);
+        const fwSlug = obj.framework_ref.replace(/^framework--/, "");
+        const localSlug = obj.id.replace(`requirement--${fwSlug}-`, "");
+        const objCount = Array.isArray(obj.objectives) ? obj.objectives.length : 0;
+        const parts = Array.isArray(obj.parts)
+          ? obj.parts.map((p) => ({ id: p.id, statement: p.statement }))
+          : [];
+        const paramsCount = obj.parameters ? Object.keys(obj.parameters).length : 0;
+        const mappings = mappingsBySource.get(obj.id) || [];
+        const incomingControlMappings = (mappingsByTargetBase.get(obj.id) || []).filter((m) =>
+          m.source_ref.startsWith("control--"),
+        );
+        const withdrawn = Boolean(obj.withdrawn);
 
-      totalObjectives += objCount;
-      if (withdrawn) withdrawnCount += 1;
+        totalObjectives += objCount;
+        if (withdrawn) withdrawnCount += 1;
 
-      if (fw) {
-        fw.requirement_count += 1;
-        if (withdrawn) fw.withdrawn_count += 1;
-        else fw.active_count += 1;
-        fw.objective_count += objCount;
-        fw.mapping_count += mappings.length;
+        if (fw) {
+          fw.requirement_count += 1;
+          if (withdrawn) fw.withdrawn_count += 1;
+          else fw.active_count += 1;
+          fw.objective_count += objCount;
+          fw.mapping_count += mappings.length + incomingControlMappings.length;
+        }
+
+        requirements.push({
+          id: obj.id,
+          slug: localSlug,
+          display_id: obj.display_id || localSlug,
+          name: obj.name,
+          framework_id: obj.framework_ref,
+          framework_slug: fwSlug,
+          class: obj.class,
+          withdrawn,
+          statement: obj.statement || null,
+          citation: obj.citation || null,
+          parts,
+          objectives_count: objCount,
+          objectives_preview: Array.isArray(obj.objectives)
+            ? obj.objectives.slice(0, 6).map((o) => ({ id: o.id, statement: o.statement }))
+            : [],
+          params_count: paramsCount,
+          mappings,
+          incoming_mappings: incomingControlMappings,
+          yaml_path: `library/requirement/${fwSlug}/${localSlug}.yaml`,
+        });
+      } else if (obj.type === "control") {
+        const slug = obj.id.replace(/^control--/, "");
+        const ctrlMappings = (mappingsBySource.get(obj.id) || []).sort((a, b) =>
+          a.target_ref.localeCompare(b.target_ref),
+        );
+        const ctrlTests = (testsByControl.get(obj.id) || []).sort((a, b) =>
+          a.id.localeCompare(b.id),
+        );
+        controls.push({
+          id: obj.id,
+          slug,
+          display_id: obj.display_id || slug.toUpperCase(),
+          name: obj.name,
+          family: obj.family || null,
+          control_type: obj.control_type || null,
+          frequency: obj.frequency || null,
+          summary: obj.summary || null,
+          statement: obj.statement,
+          objective: obj.objective,
+          guidance: obj.guidance || null,
+          parameters: obj.parameters || {},
+          tags: obj.tags || [],
+          tests: ctrlTests,
+          mappings: ctrlMappings,
+          yaml_path: `library/control/${slug}.yaml`,
+        });
+      } else if (obj.type === "baseline") {
+        const slug = obj.id.replace(/^baseline--/, "");
+        baselines.push({
+          id: obj.id,
+          slug,
+          name: obj.name,
+          framework_refs: obj.framework_refs || [],
+          control_refs: obj.control_refs || [],
+          requirement_refs: obj.requirement_refs || [],
+          tags: obj.tags || [],
+          yaml_path: `library/baseline/${slug}.yaml`,
+        });
       }
-
-      requirements.push({
-        id: obj.id,
-        slug: localSlug,
-        display_id: obj.display_id || localSlug,
-        name: obj.name,
-        framework_id: obj.framework_ref,
-        framework_slug: fwSlug,
-        class: obj.class,
-        withdrawn,
-        statement: obj.statement || null,
-        parts,
-        objectives_count: objCount,
-        objectives_preview: Array.isArray(obj.objectives)
-          ? obj.objectives.slice(0, 6).map((o) => ({ id: o.id, statement: o.statement }))
-          : [],
-        params_count: paramsCount,
-        mappings,
-        yaml_path: `library/requirement/${fwSlug}/${localSlug}.yaml`,
-      });
     }
 
     requirements.sort((a, b) =>
@@ -136,6 +213,8 @@ export function syncLibrary() {
         ? a.display_id.localeCompare(b.display_id, undefined, { numeric: true })
         : a.framework_slug.localeCompare(b.framework_slug),
     );
+    controls.sort((a, b) => a.display_id.localeCompare(b.display_id, undefined, { numeric: true }));
+    baselines.sort((a, b) => a.slug.localeCompare(b.slug));
 
     const frameworks = Array.from(frameworksById.values()).sort((a, b) =>
       a.slug.localeCompare(b.slug),
@@ -145,7 +224,7 @@ export function syncLibrary() {
       bundle: {
         id: packed.id,
         name: packed.name || "OGRL Control Library",
-        version: packed.version || "0.1.0",
+        version: packed.version || "0.2.0",
         spec_version: packed.spec_version || "0.1.0",
         modified: packed.modified || null,
         digest,
@@ -156,13 +235,20 @@ export function syncLibrary() {
       counts: {
         objects: objects.length,
         frameworks: frameworks.length,
+        controls: controls.length,
+        baselines: baselines.length,
+        tests: totalTests,
         requirements: requirements.length,
         active_requirements: requirements.length - withdrawnCount,
         withdrawn_requirements: withdrawnCount,
         objectives: totalObjectives,
         mappings: totalMappings,
+        reviewed_mappings: reviewedMappings,
+        draft_mappings: totalMappings - reviewedMappings,
       },
       frameworks,
+      baselines,
+      controls,
       requirements,
     };
 
@@ -170,7 +256,7 @@ export function syncLibrary() {
     fs.writeFileSync(OUT_FILE, JSON.stringify(catalog), "utf-8");
     const kb = (fs.statSync(OUT_FILE).size / 1024).toFixed(1);
     console.log(
-      `Synced library catalog (${requirements.length} requirements, ${totalObjectives} objectives, ${totalMappings} mappings) -> ${path.relative(ROOT, OUT_FILE)} (${kb} KB)`,
+      `Synced library catalog (${frameworks.length} frameworks, ${controls.length} controls, ${baselines.length} baselines, ${requirements.length} requirements, ${totalObjectives} objectives, ${totalMappings} mappings) -> ${path.relative(ROOT, OUT_FILE)} (${kb} KB)`,
     );
     return catalog;
   } finally {

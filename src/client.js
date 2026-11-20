@@ -215,8 +215,12 @@
           ? `<span class="lib-tag lib-tag--withdrawn">withdrawn</span>`
           : `<span class="lib-tag lib-tag--active">active</span>`,
       ];
+      const incoming = req.incoming_mappings || [];
       if (req.objectives_count > 0) {
         badges.push(`<span class="lib-tag">${req.objectives_count} obj</span>`);
+      }
+      if (incoming.length > 0) {
+        badges.push(`<span class="lib-tag lib-tag--reviewed">${incoming.length} ctrl</span>`);
       }
       if (req.mappings.length > 0) {
         badges.push(`<span class="lib-tag">${req.mappings.length} map</span>`);
@@ -237,7 +241,22 @@
 
       const stmtHtml = req.statement
         ? `<div class="lib-detail-section"><h4>Statement</h4><p>${esc(req.statement)}</p></div>`
-        : "";
+        : req.citation
+          ? `<div class="lib-detail-section"><h4>Citation</h4><p>${esc(req.citation)} <span class="lib-more-note">(citation-only per RFC 0001 §10)</span></p></div>`
+          : "";
+
+      const incomingHtml =
+        incoming.length > 0
+          ? `<div class="lib-detail-section">
+              <h4>Mapped standard controls (${incoming.length})</h4>
+              <ul class="lib-parts">${incoming
+                .map(
+                  (m) =>
+                    `<li><code>${esc(m.source_ref)}</code> <code>${esc(m.relationship)}</code> → <code>${esc(m.target_ref)}</code> <span class="lib-tag lib-tag--reviewed">${esc(m.review_status)}</span></li>`,
+                )
+                .join("")}</ul>
+            </div>`
+          : "";
 
       const objsHtml =
         req.objectives_preview && req.objectives_preview.length > 0
@@ -281,6 +300,7 @@
     ${stmtHtml}
     ${partsHtml}
     ${objsHtml}
+    ${incomingHtml}
     ${mapsHtml}
   </div>
 </details>`;
