@@ -3,11 +3,17 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { Marked } from "marked";
 import { renderFigure } from "../src/diagrams.mjs";
-import { renderIndexPage, renderNotFoundPage, renderRfcPage } from "../src/template.mjs";
+import {
+  renderIndexPage,
+  renderLibraryPage,
+  renderNotFoundPage,
+  renderRfcPage,
+} from "../src/template.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "..");
 const RFCS_DIR = path.join(ROOT, "rfcs");
+const DATA_DIR = path.join(ROOT, "data");
 const SRC_DIR = path.join(ROOT, "src");
 const DIST_DIR = path.join(ROOT, "dist");
 
@@ -273,6 +279,12 @@ export function build() {
     throw new Error(`Broken RFC links detected:\n  - ${broken.join("\n  - ")}`);
   }
 
+  // Load synced standard library catalog snapshot if available
+  const catalogPath = path.join(DATA_DIR, "library-catalog.json");
+  const catalog = fs.existsSync(catalogPath)
+    ? JSON.parse(fs.readFileSync(catalogPath, "utf-8"))
+    : null;
+
   // Write output cleanly
   fs.rmSync(DIST_DIR, { recursive: true, force: true });
   fs.mkdirSync(path.join(DIST_DIR, "assets"), { recursive: true });
@@ -281,8 +293,19 @@ export function build() {
   fs.copyFileSync(path.join(SRC_DIR, "styles.css"), path.join(DIST_DIR, "assets", "styles.css"));
   fs.copyFileSync(path.join(SRC_DIR, "client.js"), path.join(DIST_DIR, "assets", "client.js"));
 
-  fs.writeFileSync(path.join(DIST_DIR, "index.html"), renderIndexPage(rfcs), "utf-8");
+  fs.writeFileSync(path.join(DIST_DIR, "index.html"), renderIndexPage(rfcs, catalog), "utf-8");
   fs.writeFileSync(path.join(DIST_DIR, "404.html"), renderNotFoundPage(rfcs), "utf-8");
+
+  if (catalog) {
+    const libDist = path.join(DIST_DIR, "library");
+    fs.mkdirSync(libDist, { recursive: true });
+    fs.writeFileSync(
+      path.join(libDist, "index.html"),
+      renderLibraryPage(rfcs, catalog),
+      "utf-8",
+    );
+    fs.copyFileSync(catalogPath, path.join(libDist, "catalog.json"));
+  }
 
   rfcs.forEach((rfc, index) => {
     const dir = path.join(DIST_DIR, "rfcs", rfc.slug);
@@ -291,7 +314,8 @@ export function build() {
     fs.writeFileSync(path.join(DIST_DIR, "rfcs", `${rfc.slug}.md`), rfc.raw, "utf-8");
   });
 
-  console.log(`Built ${rfcs.length} RFCs into ${path.relative(ROOT, DIST_DIR)}/`);
+  const libMsg = catalog ? ` + library catalog (${catalog.counts.requirements} requirements)` : "";
+  console.log(`Built ${rfcs.length} RFCs${libMsg} into ${path.relative(ROOT, DIST_DIR)}/`);
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {

@@ -181,4 +181,197 @@
     box.querySelectorAll("select").forEach((sel) => sel.addEventListener("change", evaluate));
     evaluate();
   });
+
+  // Interactive Standard Library Catalog Browser (/library/)
+  const catalogRoot = document.querySelector("[data-library-catalog]");
+  if (catalogRoot) {
+    const searchEl = catalogRoot.querySelector("[data-lib-search]");
+    const listEl = catalogRoot.querySelector("[data-lib-list]");
+    const countEl = catalogRoot.querySelector("[data-lib-count]");
+    const moreBtn = catalogRoot.querySelector("[data-lib-more]");
+    const repoUrl = catalogRoot.dataset.repoUrl || "https://github.com/adversitydotdev/ogrl-library";
+
+    let allReqs = [];
+    let filtered = [];
+    let activeFw = "all";
+    let activeStatus = "all";
+    let query = "";
+    let visibleLimit = 60;
+
+    function esc(str) {
+      return String(str)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;");
+    }
+
+    function renderRow(req) {
+      const yamlHref = `${repoUrl.replace(/\/$/, "")}/blob/main/${req.yaml_path}`;
+      const badges = [
+        `<span class="lib-tag">${esc(req.framework_slug)}</span>`,
+        `<span class="lib-tag">${esc(req.class)}</span>`,
+        req.withdrawn
+          ? `<span class="lib-tag lib-tag--withdrawn">withdrawn</span>`
+          : `<span class="lib-tag lib-tag--active">active</span>`,
+      ];
+      if (req.objectives_count > 0) {
+        badges.push(`<span class="lib-tag">${req.objectives_count} obj</span>`);
+      }
+      if (req.mappings.length > 0) {
+        badges.push(`<span class="lib-tag">${req.mappings.length} map</span>`);
+      }
+
+      const partsHtml =
+        req.parts.length > 0
+          ? `<div class="lib-detail-section">
+              <h4>Statement parts (${req.parts.length})</h4>
+              <ul class="lib-parts">${req.parts
+                .map(
+                  (p) =>
+                    `<li><code>${esc(p.id)}</code> ${esc(p.statement)}</li>`,
+                )
+                .join("")}</ul>
+            </div>`
+          : "";
+
+      const stmtHtml = req.statement
+        ? `<div class="lib-detail-section"><h4>Statement</h4><p>${esc(req.statement)}</p></div>`
+        : "";
+
+      const objsHtml =
+        req.objectives_preview && req.objectives_preview.length > 0
+          ? `<div class="lib-detail-section">
+              <h4>Assessment objectives (${req.objectives_count})</h4>
+              <ul class="lib-parts">${req.objectives_preview
+                .map((o) => `<li><code>#obj.${esc(o.id)}</code> ${esc(o.statement)}</li>`)
+                .join("")}${
+                req.objectives_count > req.objectives_preview.length
+                  ? `<li class="lib-more-note">…and ${req.objectives_count - req.objectives_preview.length} more in YAML</li>`
+                  : ""
+              }</ul>
+            </div>`
+          : "";
+
+      const mapsHtml =
+        req.mappings.length > 0
+          ? `<div class="lib-detail-section">
+              <h4>Outgoing mappings (${req.mappings.length})</h4>
+              <ul class="lib-parts">${req.mappings
+                .map(
+                  (m) =>
+                    `<li><code>${esc(m.relationship)}</code> → <code>${esc(m.target_ref)}</code> <span class="lib-tag">${esc(m.review_status)}</span></li>`,
+                )
+                .join("")}</ul>
+            </div>`
+          : "";
+
+      return `<details class="lib-item">
+  <summary class="lib-item-summary">
+    <span class="lib-item-id">${esc(req.display_id)}</span>
+    <span class="lib-item-name">${esc(req.name)}</span>
+    <span class="lib-item-badges">${badges.join("")}</span>
+  </summary>
+  <div class="lib-item-body">
+    <div class="lib-item-meta">
+      <code>${esc(req.id)}</code>
+      <span>${req.params_count} parameter(s)</span>
+      <a href="${esc(yamlHref)}" target="_blank" rel="noopener noreferrer">View YAML in ogrl-library ↗</a>
+    </div>
+    ${stmtHtml}
+    ${partsHtml}
+    ${objsHtml}
+    ${mapsHtml}
+  </div>
+</details>`;
+    }
+
+    function render() {
+      const slice = filtered.slice(0, visibleLimit);
+      listEl.innerHTML =
+        slice.length > 0
+          ? slice.map(renderRow).join("\n")
+          : `<p class="lib-empty">No requirements match the current filters.</p>`;
+      countEl.textContent = `Showing ${slice.length.toLocaleString("en-US")} of ${filtered.length.toLocaleString("en-US")} matching requirements (${allReqs.length.toLocaleString("en-US")} total)`;
+      if (moreBtn) {
+        moreBtn.hidden = slice.length >= filtered.length;
+      }
+    }
+
+    function applyFilters() {
+      const q = query.trim().toLowerCase();
+      filtered = allReqs.filter((r) => {
+        if (activeFw !== "all" && r.framework_slug !== activeFw) return false;
+        if (activeStatus === "active" && r.withdrawn) return false;
+        if (activeStatus === "withdrawn" && !r.withdrawn) return false;
+        if (!q) return true;
+        return r._haystack.includes(q);
+      });
+      visibleLimit = 60;
+      render();
+    }
+
+    function setActiveFramework(slug) {
+      activeFw = slug;
+      catalogRoot.querySelectorAll("[data-lib-fw-pill]").forEach((btn) => {
+        btn.classList.toggle("is-active", btn.dataset.libFwPill === slug);
+      });
+      catalogRoot.querySelectorAll("[data-lib-fw]").forEach((card) => {
+        card.classList.toggle("is-active", card.dataset.libFw === slug);
+      });
+      applyFilters();
+    }
+
+    catalogRoot.querySelectorAll("[data-lib-fw-pill]").forEach((btn) => {
+      btn.addEventListener("click", () => setActiveFramework(btn.dataset.libFwPill));
+    });
+    catalogRoot.querySelectorAll("[data-lib-fw]").forEach((card) => {
+      card.addEventListener("click", () => {
+        const slug = card.dataset.libFw;
+        setActiveFramework(activeFw === slug ? "all" : slug);
+      });
+    });
+    catalogRoot.querySelectorAll("[data-lib-status]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        activeStatus = btn.dataset.libStatus;
+        catalogRoot.querySelectorAll("[data-lib-status]").forEach((b) => {
+          b.classList.toggle("is-active", b === btn);
+        });
+        applyFilters();
+      });
+    });
+    if (searchEl) {
+      searchEl.addEventListener("input", () => {
+        query = searchEl.value;
+        applyFilters();
+      });
+    }
+    if (moreBtn) {
+      moreBtn.addEventListener("click", () => {
+        visibleLimit += 80;
+        render();
+      });
+    }
+
+    fetch("/library/catalog.json")
+      .then((res) => res.json())
+      .then((data) => {
+        allReqs = (data.requirements || []).map((r) => ({
+          ...r,
+          _haystack: [
+            r.display_id,
+            r.id,
+            r.name,
+            r.statement || "",
+            ...(r.parts || []).map((p) => p.statement),
+          ]
+            .join(" ")
+            .toLowerCase(),
+        }));
+        applyFilters();
+      })
+      .catch(() => {
+        countEl.textContent = "Failed to load /library/catalog.json.";
+      });
+  }
 })();

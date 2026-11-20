@@ -12,7 +12,7 @@ const THEME_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" st
 
 const THEME_INIT_SCRIPT = `<script>(function(){try{var s=localStorage.getItem("ogrl-rfcs-theme");var d=s?s==="dark":window.matchMedia("(prefers-color-scheme: dark)").matches;if(d)document.documentElement.classList.add("dark");}catch(e){}})();</script>`;
 
-function renderHeader(rfcs, currentSlug) {
+function renderHeader(rfcs, currentSlug, activeNav = "index") {
   const navItems = rfcs
     .map(
       (r) =>
@@ -22,7 +22,9 @@ function renderHeader(rfcs, currentSlug) {
 
   const rawBtn = currentSlug
     ? `<a class="icon-btn" href="/rfcs/${currentSlug}.md" title="Download raw Markdown">Raw .md</a>`
-    : "";
+    : activeNav === "library"
+      ? `<a class="icon-btn" href="/library/catalog.json" title="Download catalog JSON">catalog.json</a>`
+      : "";
 
   return `<header class="site-header">
   <div class="header-inner">
@@ -30,11 +32,12 @@ function renderHeader(rfcs, currentSlug) {
       <span class="brand-mark">${HEXAGON_SVG}</span>
       <span class="brand-wordmark">OGRL</span>
       <span class="brand-sep">/</span>
-      <span class="brand-sub">RFCs</span>
+      <span class="brand-sub">${activeNav === "library" ? "Library" : "RFCs"}</span>
     </a>
-    <nav class="header-nav" aria-label="Specifications">
-      <a class="nav-link" href="/"${!currentSlug ? ' aria-current="page"' : ""}>Index</a>
+    <nav class="header-nav" aria-label="Primary">
+      <a class="nav-link" href="/"${activeNav === "index" ? ' aria-current="page"' : ""}>Index</a>
       ${navItems}
+      <a class="nav-link" href="/library/"${activeNav === "library" ? ' aria-current="page"' : ""}>Library</a>
     </nav>
     <div class="header-actions">
       ${rawBtn}
@@ -44,7 +47,7 @@ function renderHeader(rfcs, currentSlug) {
 </header>`;
 }
 
-function renderShell({ title, description, rfcs, currentSlug, body }) {
+function renderShell({ title, description, rfcs, currentSlug, activeNav = "index", body }) {
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -59,12 +62,20 @@ function renderShell({ title, description, rfcs, currentSlug, body }) {
   <link rel="stylesheet" href="/assets/styles.css" />
 </head>
 <body>
-  ${renderHeader(rfcs, currentSlug)}
+  ${renderHeader(rfcs, currentSlug, activeNav)}
   ${body}
   <footer class="site-footer">
     <div class="footer-inner">
       <span>OGRL · Open GRC Language · Spec 0.1.0</span>
-      <span><a href="/">All RFCs</a></span>
+      <span class="footer-links">
+        <a href="/">RFCs</a>
+        <span aria-hidden="true">·</span>
+        <a href="/library/">Library Catalog</a>
+        <span aria-hidden="true">·</span>
+        <a href="https://github.com/adversitydotdev/ogrl-library" target="_blank" rel="noopener noreferrer">ogrl-library</a>
+        <span aria-hidden="true">·</span>
+        <a href="https://github.com/adversitydotdev/ogrl-rs" target="_blank" rel="noopener noreferrer">ogrl-rs</a>
+      </span>
     </div>
   </footer>
   <script src="/assets/client.js" defer></script>
@@ -72,27 +83,37 @@ function renderShell({ title, description, rfcs, currentSlug, body }) {
 </html>`;
 }
 
-export function renderIndexPage(rfcs) {
+export function renderIndexPage(rfcs, catalog = null) {
+  const libRole = catalog
+    ? `${catalog.counts.frameworks} frameworks, ${catalog.counts.requirements.toLocaleString("en-US")} requirements, ${catalog.counts.objectives.toLocaleString("en-US")} assessment objectives, and ${catalog.counts.mappings.toLocaleString("en-US")} draft mappings.`
+    : "Shared NIST frameworks, requirements, assessment objectives, and crosswalk mappings.";
+
   const layers = [
     {
-      num: "0001",
-      slug: "0001-object-model",
+      step: "RFC 0001",
+      href: "/rfcs/0001-object-model/",
       name: "Object Model",
       role: "Typed graph, YAML/JSON forms, constraints, and deterministic computed status.",
     },
     {
-      num: "0002",
-      slug: "0002-tooling",
+      step: "RFC 0002",
+      href: "/rfcs/0002-tooling/",
       name: "Tooling & Sources of Truth",
       role: "Authority boundaries, library pulls, provider bundles, Git snapshots, and OSCAL export.",
     },
+    {
+      step: "Catalog",
+      href: "/library/",
+      name: "Standard Library",
+      role: libRole,
+    },
   ];
 
-  const layerStrip = `<section class="layer-strip" aria-label="Specification architecture">
+  const layerStrip = `<section class="layer-strip" aria-label="OGRL architecture and catalog">
   ${layers
     .map(
-      (l) => `<a class="layer-card" href="/rfcs/${l.slug}/">
-    <div class="layer-step">RFC ${l.num}</div>
+      (l) => `<a class="layer-card" href="${l.href}">
+    <div class="layer-step">${esc(l.step)}</div>
     <div class="layer-name">${esc(l.name)}</div>
     <div class="layer-role">${esc(l.role)}</div>
   </a>`,
@@ -129,6 +150,34 @@ export function renderIndexPage(rfcs) {
     })
     .join("\n");
 
+  const libraryCallout = catalog
+    ? `<h2 class="section-heading section-heading--spaced">Standard Library</h2>
+  <section class="rfc-list" aria-label="Standard library catalog">
+    <article class="rfc-row">
+      <div class="rfc-row-num">LIB v${esc(catalog.bundle.version)}</div>
+      <div>
+        <h2 class="rfc-row-title"><a href="/library/">OGRL Control &amp; Framework Catalog</a></h2>
+        <p class="rfc-row-summary">
+          Browse ${catalog.counts.requirements.toLocaleString("en-US")} normalized requirements and
+          ${catalog.counts.objectives.toLocaleString("en-US")} NIST assessment objectives across
+          ${catalog.frameworks.map((f) => esc(f.name)).join(" and ")}, compiled from pinned OSCAL 1.2.3
+          catalogs with ${catalog.counts.mappings.toLocaleString("en-US")} draft crosswalk mappings.
+        </p>
+        <div class="rfc-row-meta">
+          <span class="status-pill">${esc(catalog.bundle.id)}</span>
+          <span>v${esc(catalog.bundle.version)}</span>
+          <span>Spec ${esc(catalog.bundle.spec_version)}</span>
+          <span><a href="${esc(catalog.bundle.repo_url)}" target="_blank" rel="noopener noreferrer">ogrl-library ↗</a></span>
+          <span><a href="${esc(catalog.bundle.tools_repo_url)}" target="_blank" rel="noopener noreferrer">ogrl-rs CLI ↗</a></span>
+        </div>
+      </div>
+      <div class="rfc-row-actions">
+        <a class="icon-btn" href="/library/">Browse →</a>
+      </div>
+    </article>
+  </section>`
+    : "";
+
   const body = `<section class="hero-band">
   <div class="hero-inner">
     <p class="eyebrow">Open GRC Language · Request for Comments</p>
@@ -146,14 +195,134 @@ export function renderIndexPage(rfcs) {
   <section class="rfc-list" aria-label="RFC list">
     ${rows}
   </section>
+  ${libraryCallout}
 </main>`;
 
   return renderShell({
     title: "OGRL RFCs — Open GRC Language Specifications",
     description:
-      "Request for Comments specifications for OGRL (Open GRC Language): the object model and tooling/exchange semantics.",
+      "Request for Comments specifications and standard library catalog for OGRL (Open GRC Language).",
     rfcs,
     currentSlug: null,
+    activeNav: "index",
+    body,
+  });
+}
+
+export function renderLibraryPage(rfcs, catalog) {
+  const { bundle, counts, frameworks } = catalog;
+  const shortDigest = bundle.digest ? `${bundle.digest.slice(0, 20)}…` : "";
+
+  const metaItems = [
+    { label: "Bundle", html: `<code>${esc(bundle.id)}</code>` },
+    { label: "Version", html: esc(bundle.version) },
+    { label: "Spec version", html: esc(bundle.spec_version) },
+    { label: "Requirements", html: `${counts.requirements.toLocaleString("en-US")} (${counts.withdrawn_requirements} withdrawn)` },
+    { label: "Assessment objectives", html: counts.objectives.toLocaleString("en-US") },
+    { label: "Draft mappings", html: counts.mappings.toLocaleString("en-US") },
+  ];
+  if (shortDigest) {
+    metaItems.push({
+      label: "Projection digest",
+      html: `<code title="${esc(bundle.digest)}">${esc(shortDigest)}</code>`,
+    });
+  }
+
+  const fwCards = frameworks
+    .map((fw) => {
+      const srcCommit = fw.source?.commit ? fw.source.commit.slice(0, 8) : null;
+      return `<button type="button" class="lib-fw-card" data-lib-fw="${esc(fw.slug)}">
+  <div class="lib-fw-top">
+    <span class="layer-step">${esc(fw.publisher)} · v${esc(fw.version)}</span>
+    <span class="status-pill">${esc(fw.reproduction)}</span>
+  </div>
+  <div class="lib-fw-name">${esc(fw.name)}</div>
+  <div class="lib-fw-id"><code>${esc(fw.id)}</code></div>
+  <div class="lib-fw-stats">
+    <span><strong>${fw.active_count.toLocaleString("en-US")}</strong> active</span>
+    <span><strong>${fw.withdrawn_count}</strong> withdrawn</span>
+    <span><strong>${fw.objective_count.toLocaleString("en-US")}</strong> objectives</span>
+    <span><strong>${fw.mapping_count}</strong> mappings</span>
+  </div>
+  ${srcCommit ? `<div class="lib-fw-source">OSCAL commit <code>${esc(srcCommit)}</code></div>` : ""}
+</button>`;
+    })
+    .join("\n");
+
+  const body = `<section class="hero-band">
+  <div class="hero-inner">
+    <p class="eyebrow">OGRL Standard Library · ${esc(bundle.id)}</p>
+    <h1 class="hero-title">Open framework &amp; control catalog.</h1>
+    <p class="hero-lede">
+      Normalized requirements, statement parts, parameters, NIST assessment objectives, and draft
+      crosswalk mappings compiled from pinned upstream OSCAL 1.2.3 catalogs. Authoritative YAML
+      sources live in <a href="${esc(bundle.repo_url)}" target="_blank" rel="noopener noreferrer">ogrl-library</a>
+      and are built and validated by <a href="${esc(bundle.tools_repo_url)}" target="_blank" rel="noopener noreferrer">ogrl-rs</a>.
+    </p>
+    <div class="lib-hero-actions">
+      <a class="icon-btn" href="${esc(bundle.repo_url)}" target="_blank" rel="noopener noreferrer">Repository (ogrl-library) ↗</a>
+      <a class="icon-btn" href="${esc(bundle.tools_repo_url)}" target="_blank" rel="noopener noreferrer">Toolchain (ogrl-rs) ↗</a>
+      <a class="icon-btn" href="/library/catalog.json">Download catalog.json</a>
+    </div>
+    <div class="meta-bar">
+      ${metaItems
+        .map(
+          (m) => `<div class="meta-item">
+        <span class="meta-label">${esc(m.label)}</span>
+        <span class="meta-value">${m.html}</span>
+      </div>`,
+        )
+        .join("\n")}
+    </div>
+  </div>
+</section>
+<main class="index-main" data-library-catalog data-repo-url="${esc(bundle.repo_url)}">
+  <h2 class="section-heading">Published Frameworks (${frameworks.length})</h2>
+  <section class="lib-fw-grid" aria-label="Published frameworks">
+    ${fwCards}
+  </section>
+
+  <h2 class="section-heading">Requirement Explorer</h2>
+  <section class="lib-controls" aria-label="Filter requirements">
+    <input
+      type="search"
+      class="lib-search"
+      data-lib-search
+      placeholder="Search by ID, title, or prose (e.g. AC-2, 03.01.01, encryption, multifactor)…"
+      aria-label="Search requirements"
+    />
+    <div class="lib-filter-group" role="group" aria-label="Framework filter">
+      <button type="button" class="lib-pill is-active" data-lib-fw-pill="all">All frameworks</button>
+      ${frameworks
+        .map(
+          (fw) =>
+            `<button type="button" class="lib-pill" data-lib-fw-pill="${esc(fw.slug)}">${esc(fw.slug)}</button>`,
+        )
+        .join("\n")}
+    </div>
+    <div class="lib-filter-group" role="group" aria-label="Status filter">
+      <button type="button" class="lib-pill is-active" data-lib-status="all">All</button>
+      <button type="button" class="lib-pill" data-lib-status="active">Active</button>
+      <button type="button" class="lib-pill" data-lib-status="withdrawn">Withdrawn</button>
+    </div>
+  </section>
+
+  <div class="lib-status-bar">
+    <span data-lib-count>Loading ${counts.requirements.toLocaleString("en-US")} requirements…</span>
+  </div>
+
+  <div class="lib-list" data-lib-list></div>
+  <div class="lib-more-wrap">
+    <button type="button" class="icon-btn" data-lib-more hidden>Load more requirements</button>
+  </div>
+</main>`;
+
+  return renderShell({
+    title: "OGRL Standard Library Catalog — Open GRC Language",
+    description: `Browse ${counts.requirements} normalized requirements and ${counts.objectives} assessment objectives in the OGRL Standard Library.`,
+    rfcs,
+    currentSlug: null,
+    activeNav: "library",
     body,
   });
 }
@@ -259,6 +428,7 @@ export function renderRfcPage(rfc, rfcs, index) {
     description: rfc.summary,
     rfcs,
     currentSlug: rfc.slug,
+    activeNav: rfc.slug,
     body,
   });
 }
@@ -269,8 +439,8 @@ export function renderNotFoundPage(rfcs) {
     <p class="eyebrow">404 · Not Found</p>
     <h1 class="hero-title">Specification not found.</h1>
     <p class="hero-lede">
-      The requested RFC or path does not exist. Return to the <a href="/">RFC index</a> to browse
-      published OGRL specifications.
+      The requested RFC or path does not exist. Return to the <a href="/">RFC index</a> or browse
+      the <a href="/library/">Standard Library catalog</a>.
     </p>
   </div>
 </section>`;
@@ -280,6 +450,7 @@ export function renderNotFoundPage(rfcs) {
     description: "Page not found.",
     rfcs,
     currentSlug: null,
+    activeNav: "none",
     body,
   });
 }
