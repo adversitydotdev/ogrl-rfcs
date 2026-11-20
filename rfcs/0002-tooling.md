@@ -302,7 +302,7 @@ Like Git snapshots, OSCAL packages are strictly read-only renders—editing expo
 |---|---|---|
 | `ogrl import` | Upstream OSCAL catalogs → `library/` files in the OGRL repo | Built (emits statements, parts, parameters, and draft mappings; adding assessment objectives is next). Distinct from organization pulls. |
 | Library pull | OGRL repo revision → organization database | Specified in [Section 5](#5-library-pull). |
-| Application & API | Organization database ↔ web UI and API clients | Specified in [RFC 0003](0003-application.md) and [RFC 0004](0004-http-api.md). |
+| Application & API | Organization database ↔ UI and API clients | Application-specific; reads and writes organization objects only without mutating library or provider projections. |
 | Export job | Organization database → organization Git repo | Specified in [Section 8](#8-git-export). |
 | Restore | Organization snapshot → empty organization database | Specified in [Section 8.1](#81-restore). |
 | OSCAL export | Organization database + pinned library → full OSCAL 1.2.3 package | Specified in [Section 9](#9-oscal-export); shared by Git export and direct downloads. |

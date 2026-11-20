@@ -8,7 +8,7 @@
 
 This RFC defines **OGRL** (the *Open GRC Language*): the portable data model tools use to represent security controls, framework requirements, crosswalks, implementations, test results, evidence, policies, and risk.
 
-This specification covers only the language itself. Storage architecture, sync semantics, the self-hosted application, and the HTTP API are specified separately in [RFC 0002](0002-tooling.md), [RFC 0003](0003-application.md), and [RFC 0004](0004-http-api.md). Because this document is a working draft, the design choices most likely to evolve during review are collected in [Section 13](#13-open-questions).
+This specification covers only the language itself. Storage ownership, library pulls, provider bundles, Git snapshots, and OSCAL export semantics are specified in [RFC 0002](0002-tooling.md); individual applications and APIs are separate implementations built on top of these specs. Because this document is a working draft, the design choices most likely to evolve during review are collected in [Section 13](#13-open-questions).
 
 ## 1. Summary
 

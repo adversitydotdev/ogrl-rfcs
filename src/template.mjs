@@ -78,25 +78,13 @@ export function renderIndexPage(rfcs) {
       num: "0001",
       slug: "0001-object-model",
       name: "Object Model",
-      role: "Typed graph, YAML/JSON forms, constraints, computed status.",
+      role: "Typed graph, YAML/JSON forms, constraints, and deterministic computed status.",
     },
     {
       num: "0002",
       slug: "0002-tooling",
-      name: "Tooling & Authority",
-      role: "Library pulls, provider bundles, Git snapshots, OSCAL export.",
-    },
-    {
-      num: "0003",
-      slug: "0003-application",
-      name: "Application",
-      role: "Pure kernel, agent write gates, ports, Postgres, AWS topology.",
-    },
-    {
-      num: "0004",
-      slug: "0004-http-api",
-      name: "HTTP API",
-      role: "Native object routes, If-Match concurrency, async jobs, errors.",
+      name: "Tooling & Sources of Truth",
+      role: "Authority boundaries, library pulls, provider bundles, Git snapshots, and OSCAL export.",
     },
   ];
 
@@ -147,8 +135,8 @@ export function renderIndexPage(rfcs) {
     <h1 class="hero-title">Specifications for an open security program.</h1>
     <p class="hero-lede">
       OGRL defines a portable, graph-based language for security controls, framework crosswalks,
-      implementations, tests, and evidence—along with the architecture for running a self-hosted
-      program that never traps its data inside a vendor's private model.
+      implementations, tests, and evidence—along with the authority and exchange rules that let
+      a security program move cleanly between tools without vendor lock-in.
     </p>
   </div>
 </section>
@@ -163,7 +151,7 @@ export function renderIndexPage(rfcs) {
   return renderShell({
     title: "OGRL RFCs — Open GRC Language Specifications",
     description:
-      "Request for Comments specifications for OGRL (Open GRC Language): object model, tooling, application architecture, and HTTP API.",
+      "Request for Comments specifications for OGRL (Open GRC Language): the object model and tooling/exchange semantics.",
     rfcs,
     currentSlug: null,
     body,
