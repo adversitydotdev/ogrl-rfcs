@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { Marked } from "marked";
+import { renderFigure } from "../src/diagrams.mjs";
 import { renderIndexPage, renderRfcPage } from "../src/template.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -173,6 +174,9 @@ export function build() {
         },
         code({ text, lang }) {
           const language = (lang || "text").trim().toLowerCase();
+          if (language === "mermaid") {
+            return `<figure class="rfc-figure"><div class="rfc-figure-body"><pre class="mermaid">${escHtml(text)}</pre></div></figure>\n`;
+          }
           const highlighted =
             language === "yaml" || language === "yml" ? highlightYaml(text) : escHtml(text);
           return `<div class="code-block">
@@ -187,15 +191,30 @@ export function build() {
           const headerCells = token.header
             .map((cell) => `<th>${this.parser.parseInline(cell.tokens)}</th>`)
             .join("");
+          const riskBands = new Set(["low", "medium", "high", "critical"]);
+          const isRiskMatrix =
+            token.header.length === 6 &&
+            token.rows.length === 5 &&
+            token.rows.every((r) =>
+              r.slice(1).every((c) => riskBands.has(c.text.trim().toLowerCase())),
+            );
           const rows = token.rows
             .map(
               (row) =>
                 `<tr>${row
-                  .map((cell) => `<td>${this.parser.parseInline(cell.tokens)}</td>`)
+                  .map((cell, idx) => {
+                    const inner = this.parser.parseInline(cell.tokens);
+                    if (isRiskMatrix && idx > 0) {
+                      const band = cell.text.trim().toLowerCase();
+                      return `<td class="risk-cell risk-cell--${band}">${inner}</td>`;
+                    }
+                    return `<td>${inner}</td>`;
+                  })
                   .join("")}</tr>`,
             )
             .join("\n");
-          return `<div class="table-wrap"><table><thead><tr>${headerCells}</tr></thead><tbody>${rows}</tbody></table></div>\n`;
+          const cls = isRiskMatrix ? "table-wrap table-wrap--risk" : "table-wrap";
+          return `<div class="${cls}"><table><thead><tr>${headerCells}</tr></thead><tbody>${rows}</tbody></table></div>\n`;
         },
         link({ href, title, tokens }) {
           const rewritten = rewriteHref(href);
@@ -210,7 +229,8 @@ export function build() {
       },
     });
 
-    const html = marked.parse(bodyMarkdown);
+    const rawHtml = marked.parse(bodyMarkdown);
+    const html = rawHtml.replace(/<!--\s*figure:\s*([a-z0-9-]+)\s*-->/g, (_, id) => renderFigure(id));
     headingIdsBySlug.set(slug, seenIds);
 
     rfcs.push({

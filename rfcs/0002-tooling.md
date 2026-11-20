@@ -32,6 +32,8 @@ YAML files in Git and JSON rows in the database represent the exact same OGRL ob
 
 Raw evidence blobs live in object storage (such as S3); both the database and Git snapshots store only the `evidence` metadata object containing `resource.uri` and its SHA-256 `resource.digest`.
 
+<!-- figure: authority-flow -->
+
 ## 3. Standard library
 
 The standard library consists of the library-side types defined in RFC 0001:
@@ -100,6 +102,8 @@ summary: >
 `mapping_review` belongs to the closed set of types in RFC 0001, uses the standard envelope (with `name` optional), and is limited to at most one non-revoked review per organization per `mapping_ref`. When written, the platform records the pinned `library_version` and copies `mapping_modified` from the target mapping's current `modified` timestamp.
 
 **Currency and staleness.** A review remains **current** only while `mapping_modified` matches the target mapping's `modified` timestamp. If a subsequent library pull modifies that mapping—say, changing `subset-of` to `equal-to`—the review becomes stale: it is retained for history but stops taking effect, returning the mapping to unreviewed status until a human reviews the new version. Stale rejections expire the same way, and reviews targeting a revoked mapping cease to apply.
+
+<!-- figure: review-staleness -->
 
 **Effect on coverage.** For an organization, a library mapping counts as reviewed when it has a current `mapping_review` with `review_status: reviewed` (while the underlying library row retains its own `review_status: draft` until OGRL upstream reviews it). Conversely, a current `mapping_review` with `review_status: rejected` excludes that mapping from the organization's coverage even if the library itself published it as `reviewed`. Combined sets from RFC 0001 count only when every member mapping is reviewed either upstream or via a current organizational `mapping_review`.
 
@@ -178,6 +182,8 @@ Providers mint IDs under their own domain prefix (never in the reserved standard
 | `customer` | The product can support the control, but implementation belongs entirely to the customer; the provider row alone never satisfies the control. |
 
 Evidence shipped in a provider bundle uses `method: link` or `method: attestation` with a URI, digest, and `valid_until` matching the report's expiry (the artifact bytes remain with the provider). Any `test` in a provider bundle is descriptive only and carries no `run` block—a customer's harness never executes against a vendor's infrastructure.
+
+<!-- figure: shared-responsibility -->
 
 **Import workflow.** Importing a provider bundle makes its component available in the database without requiring immediate attachment to a system (attaching happens separately when the organization adds the component to `system.component_refs`):
 
@@ -264,6 +270,8 @@ Restore is a bootstrap operation, never a recurring sync: if the target database
 For federal and defense customers, OGRL renders a complete OSCAL 1.2.3 package (the same OSCAL version used by the imported NIST catalogs) from the organization database and pinned library for one `system` and one target NIST framework (such as `nist-sp-800-53-r5` or `nist-sp-800-171-r3`). Programs mapped to multiple NIST frameworks can be exported once per target. Each file is emitted in both JSON and XML with identical content.
 
 Like Git snapshots, OSCAL packages are strictly read-only renders—editing exported OSCAL and re-importing it is out of scope. Both the scheduled Git export and on-demand downloads use the same renderer.
+
+<!-- figure: oscal-fanout -->
 
 | Output file | Contents |
 |---|---|

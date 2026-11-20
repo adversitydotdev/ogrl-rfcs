@@ -147,6 +147,8 @@ Organization-authored mappings use UUIDs or domain-prefixed slugs like any other
 
 Fragments belong strictly to the reference, never to the requirement's own `id`.
 
+<!-- figure: id-anatomy -->
+
 ### 6.4 References
 
 Fields ending in `_ref` hold a single ID, and fields ending in `_refs` hold an unordered list of IDs. A dangling reference is a validation error in a self-contained bundle and a warning when a tool intentionally loads a partial graph.
@@ -218,6 +220,8 @@ OGRL defines a closed set of object types. Adding new controls, risks, or polici
 `mapping_review` is specified in [RFC 0002](0002-tooling.md#6-mapping-reviews) alongside the library pull workflow it supports.
 
 A conforming library reader needs to implement only the library types, whereas a full GRC application implements the operational types as well (see [Section 11](#11-conformance)). SHA-256 digest values shown in the examples below are placeholders.
+
+<!-- figure: object-graph -->
 
 ### 7.1 `framework`
 
@@ -456,6 +460,8 @@ combined_with_refs:
 
 The mapping carrying `combined_with_refs` together with all referenced mappings forms a **combined set** asserting that their sources, taken jointly, are `equal-to` or `superset-of` the target. Every member must share the same `target_ref`, have a `control` as its `source_ref`, and carry `subset-of` or `intersects-with`. Each member retains its own individual `relationship` (so viewed alone it still reports as a contribution), and the combined set counts toward coverage only when every member is reviewed (see [Section 8](#8-computed-status)).
 
+<!-- figure: mapping-relationships -->
+
 **Requirement-to-requirement mappings.** Official upstream crosswalks (such as SP 800-171 Rev 2 to SP 800-53) use the same `mapping` type with a `requirement` as `source_ref`. They serve as reference material for crosswalk authors and are never composed transitively into control coverage claims.
 
 **Parameter bindings (`parameter_map`).** When a target requirement contains organization-defined parameters, the mapping whose target uses each parameter can bind that parameter key to a parameter name on the source control:
@@ -473,6 +479,8 @@ Target requirement parameters resolve in precedence order, highest first:
 3. The resolved value of the control parameter named in `parameter_map`
 
 If two non-revoked mappings from controls in the same program bind the same target parameter to different control parameters, the binding is treated as a conflict error and the target parameter stays unset. If no override, baseline literal, or `parameter_map` entry exists, the parameter remains unset—exporters never fabricate defaults.
+
+<!-- figure: parameter-precedence -->
 
 ### 7.5 `baseline`
 
@@ -1065,6 +1073,8 @@ Status is always evaluated for a single `program` at a specific RFC 3339 instant
 
 None of the derived labels (`met`, `waived`, `out-of-scope`, `gap`, `unmapped`, `contribution`, `covered`) are persisted in bundle objects; every conforming tool computes them identically from the graph.
 
+<!-- figure: status-flow -->
+
 #### Freshness windows and passing tests
 
 | `test.interval` | Freshness window |
@@ -1114,6 +1124,8 @@ When a control is not `met`, the remaining states are evaluated on the primary i
 - **`waived`:** Every primary implementation has `status: exception` and is referenced by at least one active `exception` whose `expires` date is on or after the evaluation date.
 - **`out-of-scope`:** Every primary implementation either has `status: not-applicable` or is an `origin: organization` row with `responsibility` `customer` or `subservice`.
 - **`gap`:** Every other case. Gap output must identify the specific condition(s) that failed.
+
+<!-- figure: status-explorer -->
 
 #### Requirement coverage
 
