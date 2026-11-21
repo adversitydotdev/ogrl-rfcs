@@ -66,7 +66,7 @@ function renderShell({ title, description, rfcs, currentSlug, activeNav = "index
   ${body}
   <footer class="site-footer">
     <div class="footer-inner">
-      <span>OGRL · Open GRC Language · Spec 0.1.0</span>
+      <span>OGRL · Open Governance Reference Language · Spec 0.1.0</span>
       <span>Drafted with AI assistance; human review in progress · <a href="https://github.com/adversitydotdev/ogrl-rfcs#ai-assistance" target="_blank" rel="noopener noreferrer">Details</a></span>
       <span class="footer-links">
         <a href="/">RFCs</a>
@@ -189,14 +189,14 @@ export function renderIndexPage(rfcs, catalog = null) {
       <span class="pronounce-ipa">/&#x02C8;o&#x028A;.&#x0261;&#x025C;&#x02D0;rl/</span>
     </div>
     <p class="pronounce-note">
-      Short for <strong>Open GRC Language</strong>. Pronounced as a two-syllable word&mdash;<em>oh-girl</em>&mdash;rather
+      Short for <strong>Open Governance Reference Language</strong>. Pronounced as a two-syllable word&mdash;<em>oh-girl</em>&mdash;rather
       than spelled out letter by letter.
     </p>
   </section>`;
 
   const body = `<section class="hero-band">
   <div class="hero-inner">
-    <p class="eyebrow">Open GRC Language · Request for Comments</p>
+    <p class="eyebrow">Open Governance Reference Language · Request for Comments</p>
     <h1 class="hero-title">Specifications for an open security program.</h1>
     <p class="hero-lede">
       OGRL defines a portable, graph-based language for security controls, framework crosswalks,
@@ -216,9 +216,9 @@ export function renderIndexPage(rfcs, catalog = null) {
 </main>`;
 
   return renderShell({
-    title: "OGRL RFCs — Open GRC Language Specifications",
+    title: "OGRL RFCs — Open Governance Reference Language Specifications",
     description:
-      "Request for Comments specifications and standard library catalog for OGRL (Open GRC Language).",
+      "Request for Comments specifications and standard library catalog for OGRL (Open Governance Reference Language).",
     rfcs,
     currentSlug: null,
     activeNav: "index",
@@ -463,7 +463,7 @@ export function renderLibraryPage(rfcs, catalog) {
 </main>`;
 
   return renderShell({
-    title: "OGRL Standard Library Catalog — Open GRC Language",
+    title: "OGRL Standard Library Catalog — Open Governance Reference Language",
     description: `Browse ${counts.controls || 0} standard controls, ${counts.baselines || 0} baselines, ${counts.requirements} requirements, and ${counts.objectives} assessment objectives in the OGRL Standard Library.`,
     rfcs,
     currentSlug: null,

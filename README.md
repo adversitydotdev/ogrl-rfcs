@@ -1,6 +1,6 @@
 # OGRL RFCs
 
-Request for Comments specifications for **OGRL** (*Open GRC Language*).
+Request for Comments specifications for **OGRL** (*Open Governance Reference Language*).
 
 ## Specifications
 
