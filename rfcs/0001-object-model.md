@@ -5,6 +5,7 @@
 | Status | Draft |
 | Spec version | 0.1.0 |
 | Date | 2026-11-08 |
+| AI assistance | Drafted and edited with AI tools; human review in progress (see [README](https://github.com/adversitydotdev/ogrl-rfcs#ai-assistance)) |
 
 This RFC defines **OGRL** (the *Open GRC Language*): the portable data model tools use to represent security controls, framework requirements, crosswalks, implementations, test results, evidence, policies, and risk.
 

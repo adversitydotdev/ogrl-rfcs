@@ -17,3 +17,9 @@ pnpm deploy   # builds and deploys to Cloudflare Workers (ogrl.adversity.dev)
 ```
 
 The build compiles `rfcs/*.md` into static HTML under `dist/` (including raw Markdown copies at `dist/rfcs/*.md`) and verifies that every internal and cross-RFC anchor link resolves.
+
+## AI assistance
+
+These specifications and the site code were drafted and edited with help from AI tools (Anthropic Claude). The human author directs the design and is responsible for all content.
+
+Review is still in progress. While an RFC has **Draft** status, its text may not have been fully human-reviewed yet. Treat it as a proposal and [open an issue](https://github.com/adversitydotdev/ogrl-rfcs/issues) for any errors. An RFC leaves Draft only after full human review of its normative content (object model, constraints, status semantics).

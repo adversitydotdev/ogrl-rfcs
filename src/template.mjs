@@ -67,6 +67,7 @@ function renderShell({ title, description, rfcs, currentSlug, activeNav = "index
   <footer class="site-footer">
     <div class="footer-inner">
       <span>OGRL · Open GRC Language · Spec 0.1.0</span>
+      <span>Drafted with AI assistance; human review in progress · <a href="https://github.com/adversitydotdev/ogrl-rfcs#ai-assistance" target="_blank" rel="noopener noreferrer">Details</a></span>
       <span class="footer-links">
         <a href="/">RFCs</a>
         <span aria-hidden="true">·</span>

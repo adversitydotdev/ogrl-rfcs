@@ -5,6 +5,7 @@
 | Status | Draft |
 | Spec version | 0.1.0 |
 | Date | 2026-11-08 |
+| AI assistance | Drafted and edited with AI tools; human review in progress (see [README](https://github.com/adversitydotdev/ogrl-rfcs#ai-assistance)) |
 | Depends on | [RFC 0001](0001-object-model.md) |
 
 While [RFC 0001](0001-object-model.md) defines the OGRL object model, an interoperable language only works if tools agree on where objects live, who owns each copy, and how data flows between Git, operational databases, external providers, and federal OSCAL exports. This RFC establishes those ownership boundaries and lifecycle contracts. Open design questions are collected in [Section 11](#11-open-questions).
