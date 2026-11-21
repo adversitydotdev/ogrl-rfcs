@@ -721,6 +721,7 @@ A conforming harness provides the CEL standard definitions and macros (`has`, `a
 | `list.distinct()` | The list without repeated elements, keeping first occurrences. |
 | `list.duplicates()` | Elements that occur more than once, each listed once, in order of first repetition. |
 | `string.lowerAscii()` | The string with ASCII letters lowercased. |
+| `days(string)` | A `duration` of that many 24-hour days, read from a value such as `90 days` or `1 day` (a whole number, optionally followed by `day` or `days`). Control parameters are written for people, so `observed - timestamp(item.rotated) <= days(params.rotation_period)` compares against the organization's own value. Any other text is an evaluation error. |
 
 The uniqueness check in the library test above becomes:
 
