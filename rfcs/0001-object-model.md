@@ -605,7 +605,9 @@ run:
       media_type: application/json
 ```
 
-**The `run` block (`runner: shell`).** Version `0.1.0` specifies a single runner: `shell`. The `runner` field is an open token so future revisions can introduce additional runners (such as HTTP checks, queries, or policy engines) without changing the envelope. If a harness encounters an unrecognized `runner`, it must preserve the object, skip execution, and record a `result` with `outcome: error`.
+**Runners.** Version `0.1.0` specifies three runners. `shell` executes an organization-authored script. `rule` and `integration` evaluate vendor state collected by an integration (see [Snapshots](#snapshots) below). The `runner` field is an open token so future revisions can introduce additional runners without changing the envelope. If a harness encounters an unrecognized `runner`, it must preserve the object, skip execution, and record a `result` with `outcome: error`.
+
+**The `run` block (`runner: shell`).**
 
 | Field | Required | Meaning |
 |---|---|---|
@@ -633,6 +635,156 @@ Commands are trusted by the organization that authors them and execute with cred
 9. Emit one `result` object referencing the test and implementation, with `observed` set to the run timestamp, the computed `outcome` and `summary`, `evidence_refs` for collected files, and `objective_refs` copied from the test.
 
 Each run produces a new `result` object without mutating the `test` or overwriting prior results.
+
+#### Snapshots
+
+The `rule` and `integration` runners never contact a vendor. They evaluate **snapshots**: JSON documents an integration collected earlier from a vendor system, such as every user in an identity provider or every repository in a source host. Collecting snapshots, holding vendor credentials, and binding a vendor account to a `component` or `system` are application concerns (the OGRL application specifies them in its RFC 0005). The language fixes only what a check reads, so the same rule gives the same answer on any conforming harness.
+
+A **source** names one kind of snapshot:
+
+```text
+<integration>/<resource>@<major>
+dev.adversity.okta/users@1
+```
+
+`<integration>` is a reverse domain name controlled by the integration's publisher, as for [extensions](#719-extensions). `<resource>` matches `[a-z0-9-]+`. `<major>` is a positive integer that the publisher increments whenever a change to the item shape could alter the outcome of an existing rule.
+
+A snapshot document is a JSON object with at least these members (media type `application/vnd.ogrl.snapshot+json`):
+
+```json
+{
+  "source": "dev.adversity.okta/users@1",
+  "collected": "2026-11-08T17:04:00Z",
+  "complete": true,
+  "items": [
+    { "id": "00u1a2b3", "name": "alice@company.com", "status": "ACTIVE", "mfa_enrolled": true }
+  ]
+}
+```
+
+`collected` is when the collection finished. `complete` is `false` when the collection stopped early, for example on a rate limit or a missing permission. `items` holds one JSON object per vendor record. A harness never evaluates an incomplete snapshot, because a partial user list can hide exactly the account a rule exists to catch.
+
+**Snapshot selection.** Given a test, a target `implementation`, and an evaluation instant, the harness proceeds for each source the test reads:
+
+1. Find every vendor account the application binds to the implementation's scope for that source's integration.
+2. From each binding, take the latest complete snapshot of the source whose `collected` falls inside the test's freshness window ([Section 8](#8-computed-status)) before the evaluation instant. The harness may collect a fresh snapshot first. If any binding has no qualifying snapshot, or there are no bindings, the run ends with `outcome: error`.
+3. Concatenate the items from all bindings, ordered by binding identifier and then by position within each snapshot.
+
+**Results and evidence for snapshot runners.** Both runners record:
+
+- One `result` whose `observed` is the earliest `collected` among the evaluated snapshots, since the run cannot describe vendor state more recent than its oldest input.
+- One `evidence` object per evaluated snapshot, with `method: automated`, `collected` copied from the snapshot, the SHA-256 digest of the snapshot bytes, `resource.media_type: application/vnd.ogrl.snapshot+json`, `valid_from` set to the UTC date of `collected`, and `valid_until` set to that date plus the test's freshness window. Several results may reference evidence that points at the same snapshot bytes.
+- `subjects` on the result for each failing item, so reviewers see which accounts or resources failed without opening the snapshot.
+
+#### The rule runner
+
+A `rule` run evaluates [Common Expression Language](https://github.com/google/cel-spec) (CEL) expressions over a snapshot. CEL is side-effect free, cannot loop without bound, and has independent implementations, so an organization can author a check without shipping code and every harness reaches the same outcome.
+
+```yaml
+type: test
+id: test--5b8e1f0a-2c3d-4e5f-8a9b-0c1d2e3f4a5b
+spec_version: 0.1.0
+created: 2026-11-21T00:00:00Z
+modified: 2026-11-21T00:00:00Z
+name: Every active Okta user is enrolled in MFA
+control_ref: control--ogrl-ia-01
+fulfills_ref: test--ogrl-ia-01-mfa-enforcement
+method: automated
+interval: daily
+run:
+  runner: rule
+  source: dev.adversity.okta/users@1
+  select: item.status == "ACTIVE" && item.type == "human"
+  assert: item.mfa_enrolled
+```
+
+| Field | Required | Meaning |
+|---|---|---|
+| `runner` | Yes | `rule`. |
+| `source` | Yes | The one source the rule reads. |
+| `select` | No | Boolean expression over `item`. Items for which it is `false` are out of scope. Defaults to `true`. |
+| `assert` | One of `assert`, `aggregate` | Boolean expression over `item`. Every selected item must satisfy it. |
+| `aggregate` | One of `assert`, `aggregate` | Boolean expression over `items`, the list of selected items. Use it for conditions about the set, such as uniqueness or a minimum count. |
+| `subject` | No | Expression over `item` producing a map with `kind`, `name`, and `external_id` strings, used for failing items. Defaults to `kind` set to the source's `<resource>`, `external_id` set to `string(item.id)`, and `name` set to `string(item.name)` (each omitted when the field is absent). |
+| `allow_empty` | No | When `false` (the default), a run that selects no items ends with `outcome: error`. An empty selection usually means a permission is missing, not that the control passed. |
+
+Expressions see these variables: `item` (one item, in `select`, `assert`, and `subject`), `items` (selected items, in `aggregate`), `snapshot` (an object whose `items` member holds every concatenated item, before `select`), `params` (resolved control parameters as a map of strings), and `observed` (the result's `observed`, as a CEL `timestamp`). No expression can read the clock. A rule about age, such as keys older than 90 days, compares against `observed`:
+
+```yaml
+assert: observed - timestamp(item.created) <= duration(params.max_key_age_hours + "h")
+```
+
+A conforming harness provides the CEL standard definitions and macros (`has`, `all`, `exists`, `exists_one`, `map`, `filter`), RE2 `matches`, and these OGRL functions:
+
+| Function | Meaning |
+|---|---|
+| `list.distinct()` | The list without repeated elements, keeping first occurrences. |
+| `list.duplicates()` | Elements that occur more than once, each listed once, in order of first repetition. |
+| `string.lowerAscii()` | The string with ASCII letters lowercased. |
+
+The uniqueness check in the library test above becomes:
+
+```yaml
+run:
+  runner: rule
+  source: dev.adversity.okta/users@1
+  select: item.status == "ACTIVE"
+  assert: has(item.employee_id) && item.employee_id != ""
+  aggregate: items.map(u, u.employee_id).duplicates().size() == 0
+```
+
+**Rule harness contract.** After selecting snapshots, a conforming harness must:
+
+1. Reject the run with `outcome: error` if any expression fails to compile, if an expression yields a non-boolean where a boolean is required, or if evaluating any item raises an error. The summary names the field and, for item errors, the zero-based item position.
+2. Evaluate `select` on each item. If the selection is empty and `allow_empty` is not `true`, record `outcome: error`.
+3. Evaluate `assert`, when present, on each selected item, and `aggregate`, when present, once over `items`.
+4. Record `outcome: pass` when every assertion holds, and `outcome: fail` otherwise.
+5. Set `summary` to `N of M selected items pass`, appending `; aggregate failed` when `aggregate` is `false`. Record one `subjects` entry per item that failed `assert`, in item order.
+
+A harness may stop an expression that exceeds an evaluation cost limit and record `outcome: error`. The limit is set by the application.
+
+#### The integration runner
+
+An `integration` run hands snapshots to a check written in code and shipped by an installed integration. Use it when the logic is too involved for a rule, such as comparing branch rules against repository settings across two sources.
+
+```yaml
+type: test
+id: test--8c2d4e6f-1a3b-4c5d-9e7f-a0b1c2d3e4f5
+spec_version: 0.1.0
+created: 2026-11-21T00:00:00Z
+modified: 2026-11-21T00:00:00Z
+name: Production branches require review and passing checks
+control_ref: control--ogrl-cm-01
+fulfills_ref: test--ogrl-cm-01-change-control
+method: automated
+interval: daily
+run:
+  runner: integration
+  check: dev.adversity.github/branch-protection@1
+  sources:
+    - dev.adversity.github/repositories@1
+    - dev.adversity.github/rulesets@1
+  with:
+    min_approvals: "1"
+    branch_pattern: main
+```
+
+| Field | Required | Meaning |
+|---|---|---|
+| `runner` | Yes | `integration`. |
+| `check` | Yes | `<integration>/<check>@<major>`, using the same grammar as a source. |
+| `sources` | Yes | Every source the check reads. Each must belong to the same integration as the check. |
+| `with` | No | Arguments to the check, as a map of strings. |
+| `timeout` | No | As for `shell`. Defaults to `5m`; maximum `60m`. |
+
+**Integration harness contract.** After selecting snapshots for every listed source, a conforming harness must:
+
+1. Record `outcome: error` if no installed version of the integration provides the check at the requested major version.
+2. Invoke the check with the snapshots, `with`, and resolved control parameters. The check receives no vendor credentials and no secrets. Every vendor call happened during collection.
+3. Enforce `timeout` as for `shell`, recording `outcome: error` on expiry.
+4. Accept from the check an outcome of `pass`, `fail`, or `error`, a summary (truncated to 2 KB), and optional `subjects`. Anything else, or a crash, ends the run with `outcome: error`.
+
+Integrations ship checks inside the integration rather than as objects in a bundle, so a check's behavior is pinned by the installed integration version, not by the test. Two harnesses running the same test against the same snapshots must use the same integration version to promise the same outcome. Rule-based tests carry their whole logic in the object and need no such pin.
 
 ### 7.7 `party`
 
@@ -1269,6 +1421,8 @@ Tools may maintain internal database columns for indexing and querying, but inte
 - **Omit combined coverage or make it a separate object type:** Because practice-sized controls are deliberately narrower than regulatory requirements, omitting combined coverage would leave most requirements permanently stuck at `contribution`. Putting `combined_with_refs` directly on a participating `mapping` avoids multiplying files and review lifecycles while keeping each individual mapping's partial relationship intact.
 - **Inline evidence bytes or policy text inside YAML:** Embedding binary artifacts or long prose documents destroys Git diffs and bloats every downstream database. Addressing content by URI and SHA-256 digest keeps objects light and verifiable.
 - **Attach shell commands directly to `control`:** Controls are shared practices, whereas executable checks are specific to one organization's infrastructure and credentials, and a single control often needs multiple checks. Keeping `run` on `test`—linked via `fulfills_ref`—preserves clean separation.
+- **Let checks call vendor APIs directly:** A check that fetches its own data needs credentials, and each check would repeat the same calls against vendor rate limits. Separating collection from evaluation keeps credentials in one place, lets many checks share one snapshot, and makes the snapshot itself the evidence an auditor can inspect.
+- **Rego or JSONPath instead of CEL:** Rego is more expressive but needs a separate engine and is easy to write unbounded queries in. JSONPath selects data but cannot express conditions. CEL is small, bounded, has implementations in Go, Rust, Java, and Python, and is already used for policy in Kubernetes and Google Cloud IAM.
 - **Capture stdout as evidence:** Scripts routinely intermix debug logs with real outputs. Requiring explicit `run.evidence` paths ensures only intended artifacts are hashed and preserved, while truncating stdout into `result.summary` still surfaces failure diagnostics.
 
 ## 13. Open questions
@@ -1283,7 +1437,8 @@ The body of this RFC fixes a concrete default for each item below so the model i
 6. **`program` as a standalone type:** Separating `program` from `system` allows a single system to pursue multiple concurrent or historical baselines cleanly. Folding `baseline_ref` onto `system` would shrink the schema by one type at the cost of awkward multi-framework modeling.
 7. **Untested controls:** When a control has no required test, the current rule still demands at least one unexpired evidence record so `status: implemented` alone cannot mark a control `met`. The alternative is allowing `status: implemented` to suffice while flagging the control as untested in reports.
 8. **Evidence on the provider's half:** A provider-authored `shared` row accompanying a system implementation currently holds on `status: implemented` and valid attached evidence (if any), allowing provider rows with no attached evidence—such as imported OSCAL component definitions—to hold on status alone rather than forcing every imported component into `gap`.
+9. **Normalized sources:** Every source today belongs to one integration, so an MFA rule written for Okta does not run against Entra ID. A shared set of normalized sources (such as `dev.ogrl.identity/users@1`) that several integrations emit would let the standard library ship executable `rule` tests, at the cost of OGRL governing those item shapes.
 
 ## 14. What this RFC does not freeze
 
-Several adjacent areas are intentionally left open for future specifications: asset and host inventories, vendor management beyond `party.kind: organization`, physical locations, ticketing, workforce training records, and audit-engagement workflows (including assessment schedules/plans). Connector configurations remain under `extensions` until a formal connector protocol is designed, and runners beyond `shell` will be specified as harnesses implement them. Additional frameworks such as NIST CSF 2.0, CMMC Level 3, and SOC 2 Privacy can be added purely as data—new `framework`, `requirement`, and `baseline` objects—without modifying the OGRL type system.
+Several adjacent areas are intentionally left open for future specifications: asset and host inventories, vendor management beyond `party.kind: organization`, physical locations, ticketing, workforce training records, and audit-engagement workflows (including assessment schedules/plans). How an application installs integrations, stores vendor credentials, collects snapshots, and binds vendor accounts to components is outside the language; RFC 0001 fixes only the source grammar, the snapshot document, and the `rule` and `integration` runners. Further runners will be specified as harnesses implement them. Additional frameworks such as NIST CSF 2.0, CMMC Level 3, and SOC 2 Privacy can be added purely as data—new `framework`, `requirement`, and `baseline` objects—without modifying the OGRL type system.
