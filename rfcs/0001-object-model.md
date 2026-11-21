@@ -381,8 +381,9 @@ If any parameter referenced in a control's `statement` remains unset after resol
 | `tp` | Third-party vendors and subservice organizations |
 | `bc` | Backup, disaster recovery, capacity |
 | `ps` | Physical security, facilities, media |
+| `pr` | Privacy: notice, consent, data subject rights, disclosure, PII quality |
 
-Custom controls may use any of these family codes or define their own. The initial standard library targets 80–120 controls covering SOC 2 Security, Availability, Confidentiality, and Processing Integrity, with Privacy planned as a subsequent family.
+Custom controls may use any of these family codes or define their own. The initial standard library targets 80–120 controls covering all five SOC 2 Trust Services Categories: Security, Availability, Confidentiality, Processing Integrity, and Privacy.
 
 ### 7.4 `mapping`
 
