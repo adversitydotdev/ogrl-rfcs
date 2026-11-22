@@ -292,6 +292,7 @@ export function build() {
 
   fs.copyFileSync(path.join(SRC_DIR, "styles.css"), path.join(DIST_DIR, "assets", "styles.css"));
   fs.copyFileSync(path.join(SRC_DIR, "client.js"), path.join(DIST_DIR, "assets", "client.js"));
+  fs.copyFileSync(path.join(SRC_DIR, "favicon.svg"), path.join(DIST_DIR, "favicon.svg"));
 
   fs.writeFileSync(path.join(DIST_DIR, "index.html"), renderIndexPage(rfcs, catalog), "utf-8");
   fs.writeFileSync(path.join(DIST_DIR, "404.html"), renderNotFoundPage(rfcs), "utf-8");
