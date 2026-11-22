@@ -12,6 +12,23 @@ const THEME_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" st
 
 const THEME_INIT_SCRIPT = `<script>(function(){try{var s=localStorage.getItem("ogrl-rfcs-theme");var d=s?s==="dark":window.matchMedia("(prefers-color-scheme: dark)").matches;if(d)document.documentElement.classList.add("dark");}catch(e){}})();</script>`;
 
+function formatFrameworkSource(fw) {
+  const src = fw.source;
+  if (src?.commit) {
+    return `OSCAL commit <code>${esc(src.commit.slice(0, 8))}</code>`;
+  }
+  if (fw.reproduction === "permitted" && src?.sha256) {
+    return `Pinned source <code title="${esc(src.sha256)}">${esc(src.sha256.slice(0, 12))}…</code>`;
+  }
+  if (fw.reproduction === "citation-only") {
+    return "Citation-only identifiers (RFC 0001 §10)";
+  }
+  if (fw.reproduction === "permitted") {
+    return "Reproduction permitted (RFC 0001 §10)";
+  }
+  return esc(fw.reproduction || "unknown");
+}
+
 function renderHeader(rfcs, currentSlug, activeNav = "index") {
   const navItems = rfcs
     .map(
@@ -67,7 +84,7 @@ function renderShell({ title, description, rfcs, currentSlug, activeNav = "index
   ${body}
   <footer class="site-footer">
     <div class="footer-inner">
-      <span>OGRL · Open Governance Reference Language · Spec 0.1.0</span>
+      <span>OGRL · Open Governance Reference Language · Spec 0.2.0</span>
       <span>Drafted with AI assistance; human review in progress · <a href="https://github.com/adversitydotdev/ogrl-rfcs#ai-assistance" target="_blank" rel="noopener noreferrer">Details</a></span>
       <span class="footer-links">
         <a href="/">RFCs</a>
@@ -258,7 +275,6 @@ export function renderLibraryPage(rfcs, catalog) {
 
   const fwCards = frameworks
     .map((fw) => {
-      const srcCommit = fw.source?.commit ? fw.source.commit.slice(0, 8) : null;
       return `<button type="button" class="lib-fw-card" data-lib-fw="${esc(fw.slug)}">
   <div class="lib-fw-top">
     <span class="layer-step">${esc(fw.publisher)} · v${esc(fw.version)}</span>
@@ -272,7 +288,7 @@ export function renderLibraryPage(rfcs, catalog) {
     ${fw.objective_count > 0 ? `<span><strong>${fw.objective_count.toLocaleString("en-US")}</strong> objectives</span>` : ""}
     <span><strong>${fw.mapping_count}</strong> mappings</span>
   </div>
-  ${srcCommit ? `<div class="lib-fw-source">OSCAL commit <code>${esc(srcCommit)}</code></div>` : `<div class="lib-fw-source">Citation-only identifiers (RFC 0001 §10)</div>`}
+  <div class="lib-fw-source">${formatFrameworkSource(fw)}</div>
 </button>`;
     })
     .join("\n");

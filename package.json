@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "OGRL (Open GRC Language) Request for Comments specification site.",
+  "description": "OGRL (Open Governance Reference Language) Request for Comments specification site.",
   "scripts": {
     "sync:library": "node scripts/sync-library.mjs",
     "build": "node scripts/build.mjs",
