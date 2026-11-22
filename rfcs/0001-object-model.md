@@ -1209,9 +1209,9 @@ Authors hand-edit `library/control`, `library/mapping`, `library/baseline`, and 
 |---|---|---|
 | NIST SP 800-53 Rev 5.2.0 and SP 800-53B (low, moderate, high, privacy) | Compiled from pinned `oscal-content` catalog and profiles | Permitted (public domain). |
 | NIST SP 800-171 Rev 3 and SP 800-172 Rev 3 | Compiled from `oscal-content` | Permitted. |
-| NIST SP 800-171 Rev 2 | Authored from the NIST publication (`oscal-content` publishes Rev 3, while CMMC Level 2 assesses Rev 2) | Permitted. |
-| CMMC Level 1 | 17 practices aligned to FAR 52.204-21 | Permitted as FAR citations. |
-| CMMC Level 2 | Baseline selecting the 110 SP 800-171 Rev 2 requirements | Reuses Rev 2 requirement objects. |
+| NIST SP 800-171 Rev 2 | Compiled by `ogrl import nist` from the pinned SP 800-171A assessment-procedures CSV, with explicit errata reconciling it to the normative SP 800-171A and SP 800-171 Rev 2 PDFs (`oscal-content` publishes Rev 3 only, while CMMC Level 2 assesses Rev 2) | Permitted. |
+| CMMC Level 1 | Baseline selecting the 17 SP 800-171 Rev 2 requirements that implement the 15 FAR 52.204-21(b)(1) safeguards | Reuses Rev 2 requirement objects; CMMC practice IDs (`AC.L1-b.1.i`) live in baseline `extensions`. |
+| CMMC Level 2 | Baseline selecting the 110 SP 800-171 Rev 2 requirements | Reuses Rev 2 requirement objects; practice IDs, point values, and POA&M eligibility (32 CFR 170.21, 170.24) live in baseline `extensions`. |
 | CMMC Level 3 | Future baseline combining Rev 2 with a selected SP 800-172 subset | Deferred past initial slice. |
 | SOC 2 Trust Services Criteria (2017) | Hand-authored index: Security (`CC1.1`–`CC9.2`, 33 criteria), Availability (`A1.1`–`A1.3`), Confidentiality (`C1.1`–`C1.2`), Processing Integrity (`PI1.1`–`PI1.5`) | Identifier, OGRL-authored title, and citation only; AICPA text and points of focus stay out. |
 | ISO/IEC 27001:2022 | Hand-authored index covering Annex A (93 controls, `A.5`–`A.8`) and clauses `4`–`10` | Identifier and OGRL-authored title only; ISO text stays out. |
@@ -1226,7 +1226,7 @@ NIST SP 800-66 Rev 2's crosswalk from the HIPAA Security Rule to SP 800-53 Rev 5
 
 ### 10.1 OSCAL import
 
-`ogrl import nist` reads a pinned revision of `usnistgov/oscal-content` and compiles SP 800-53 Rev 5.2.0 and SP 800-171 Rev 3 into OGRL files:
+`ogrl import nist` reads a pinned revision of `usnistgov/oscal-content` and compiles SP 800-53 Rev 5.2.0 and SP 800-171 Rev 3 into OGRL files. It also compiles SP 800-171 Rev 2 from the SP 800-171A assessment-procedures CSV, pinned by SHA-256, converted to an in-memory OSCAL catalog, and corrected by explicit errata that must each match a CSV row. The catalog importer then processes all three:
 
 - Each catalog produces one `framework` object and one `requirement` per control. Enhancements become standalone requirements with `class: enhancement`.
 - Withdrawn controls are emitted with `withdrawn: true` (never `revoked: true`) so their IDs remain resolvable.
@@ -1242,7 +1242,7 @@ Cross-requirement links in OSCAL catalogs become draft mappings (`review_status:
 | `moved-to` | `equivalent-to` |
 | `addressed_by` | `intersects-with` |
 
-`related` and `required` links are not converted into mappings. Links targeting a control family or an external standard (SP 800-162, FIPS, CFR) are recorded under `external_references` instead. Because `oscal-content` ships SP 800-171 Rev 3 rather than Rev 2, `ogrl import oscal` accepts any local OSCAL catalog file so Rev 2 can be imported on demand.
+`related` and `required` links are not converted into mappings. Links targeting a control family or an external standard (SP 800-162, FIPS, CFR) are recorded under `external_references` instead. `ogrl import oscal` accepts any local OSCAL catalog file for catalogs NIST does not publish in `oscal-content`.
 
 ## 11. Conformance
 
