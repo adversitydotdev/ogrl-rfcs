@@ -687,8 +687,8 @@ spec_version: 0.1.0
 created: 2026-11-21T00:00:00Z
 modified: 2026-11-21T00:00:00Z
 name: Every active Okta user is enrolled in MFA
-control_ref: control--ogrl-ia-01
-fulfills_ref: test--ogrl-ia-01-mfa-enforcement
+control_ref: control--ogrl-ac-05
+fulfills_ref: test--ogrl-ac-05-mfa-enforcement
 method: automated
 interval: daily
 run:
