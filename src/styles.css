@@ -150,11 +150,9 @@ a:hover {
 }
 
 .brand-mark {
-  width: 1.75rem;
-  height: 1.75rem;
-  border-radius: 0.42rem;
-  background: var(--fg);
-  color: var(--bg);
+  width: 1.5rem;
+  height: 1.5rem;
+  color: var(--fg);
   display: inline-flex;
   align-items: center;
   justify-content: center;
