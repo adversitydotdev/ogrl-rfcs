@@ -3,9 +3,21 @@
 | Field | Value |
 |---|---|
 | Status | Draft |
-| Spec version | 0.1.0 |
-| Date | 2026-11-08 |
+| Spec version | 0.2.0 |
+| Date | 2026-11-21 |
 | AI assistance | Drafted and edited with AI tools; human review in progress (see [README](https://github.com/adversitydotdev/ogrl-rfcs#ai-assistance)) |
+
+## Changelog
+
+### 0.2.0 (2026-11-21)
+
+- Added automated test runners `rule` (CEL over integration snapshots) and `integration` (versioned integration checks), including the snapshot source grammar, harness contracts, and CEL helper `days()`.
+- Added the `pr` (privacy) standard control family.
+- Clarified that `bundle` is a packaging manifest outside the Section 7 graph type set.
+
+### 0.1.0 (2026-11-08)
+
+- Initial public draft of the object model, serialization rules, graph constraints, and computed status.
 
 This RFC defines **OGRL** (the *Open Governance Reference Language*): the portable data model tools use to represent security controls, framework requirements, crosswalks, implementations, test results, evidence, policies, and risk.
 
@@ -93,7 +105,7 @@ Every OGRL object carries a shared envelope:
 |---|---|---|
 | `type` | Yes | One of the closed set of object types defined in [Section 7](#7-types). |
 | `id` | Yes | Globally unique identifier (see [Section 6.3](#63-identifiers)). |
-| `spec_version` | Yes | OGRL specification version. This RFC defines `0.1.0`. |
+| `spec_version` | Yes | OGRL specification version. This RFC defines `0.2.0`. |
 | `created` | Yes | UTC timestamp when this ID was originally minted. Immutable. |
 | `modified` | Yes | UTC timestamp when the producer last altered any field. Each revision uses the same `id` with a strictly later `modified` (using fractional seconds if multiple writes occur within the same second). |
 | `name` | Yes, except `mapping`, `mapping_review`, `implementation`, `result`, and `exception` | Human-readable title. The five excepted types are naturally identified by their references, though they may still include a `name`. |
@@ -104,7 +116,9 @@ Every OGRL object carries a shared envelope:
 | `extensions` | No | Map of vendor or organization extension objects keyed by the owner's domain name. |
 | `lang` | No | BCP 47 language tag. Defaults to `en`. |
 
-**Versioning rules.** `spec_version` tracks the OGRL language specification, whereas a bundle's `version` tracks a content release of a library or provider catalog; the two evolve independently. Every object within a single bundle must share the same `spec_version` (mixing language versions in one bundle is out of scope for `0.1.0`).
+**Versioning rules.** `spec_version` tracks the OGRL language specification, whereas a bundle's `version` tracks a content release of a library or provider catalog; the two evolve independently. Every graph object within a single bundle must share the same `spec_version` (mixing language versions in one bundle is out of scope for `0.2.0`).
+
+The `bundle` manifest in [Section 6.5](#65-bundles) is not itself a graph node: it uses `type: bundle`, which is outside the closed object-type set in [Section 7](#7-types). Objects discovered inside or listed under a bundle must each use a type from that set.
 
 `spec_version` follows `major.minor.patch`:
 
@@ -166,11 +180,11 @@ Repository form:
 ```yaml
 type: bundle
 id: bundle--ogrl-library
-spec_version: 0.1.0
+spec_version: 0.2.0
 created: 2026-11-08T00:00:00Z
 modified: 2026-11-08T00:00:00Z
 name: OGRL Control Library
-version: 0.1.0
+version: 0.4.1
 ```
 
 Exchange form:
@@ -178,15 +192,15 @@ Exchange form:
 ```yaml
 type: bundle
 id: bundle--ogrl-library
-spec_version: 0.1.0
+spec_version: 0.2.0
 created: 2026-11-08T00:00:00Z
 modified: 2026-11-08T00:00:00Z
 name: OGRL Control Library
-version: 0.1.0
+version: 0.4.1
 objects:
   - type: control
     id: control--ogrl-ac-01
-    spec_version: 0.1.0
+    spec_version: 0.2.0
     # remaining fields of each object
 ```
 
@@ -231,7 +245,7 @@ A `framework` identifies an external standard or regulatory publication at a spe
 ```yaml
 type: framework
 id: framework--nist-sp-800-53-r5
-spec_version: 0.1.0
+spec_version: 0.2.0
 created: 2026-11-08T00:00:00Z
 modified: 2026-11-08T00:00:00Z
 name: NIST SP 800-53 Revision 5
@@ -255,7 +269,7 @@ Citation-only requirement example:
 ```yaml
 type: requirement
 id: requirement--soc2-tsc-2017-cc6.1
-spec_version: 0.1.0
+spec_version: 0.2.0
 created: 2026-11-08T00:00:00Z
 modified: 2026-11-08T00:00:00Z
 display_id: CC6.1
@@ -272,7 +286,7 @@ Full-text requirement example (abridged; the imported AC-2 carries ten parameter
 ```yaml
 type: requirement
 id: requirement--nist-sp-800-53-r5-ac-2
-spec_version: 0.1.0
+spec_version: 0.2.0
 created: 2026-11-08T00:00:00Z
 modified: 2026-11-08T00:00:00Z
 display_id: AC-2
@@ -325,7 +339,7 @@ A `control` defines a single auditable security practice—scoped so one team ca
 ```yaml
 type: control
 id: control--ogrl-ac-01
-spec_version: 0.1.0
+spec_version: 0.2.0
 created: 2026-11-08T00:00:00Z
 modified: 2026-11-08T00:00:00Z
 display_id: OGRL-AC-01
@@ -392,7 +406,7 @@ A `mapping` is the sole mechanism for crosswalks in OGRL. `source_ref` points to
 ```yaml
 type: mapping
 id: mapping--ogrl-ac-01_to_soc2-tsc-2017-cc6.1
-spec_version: 0.1.0
+spec_version: 0.2.0
 created: 2026-11-08T00:00:00Z
 modified: 2026-11-08T00:00:00Z
 source_ref: control--ogrl-ac-01
@@ -411,7 +425,7 @@ Targeting a specific statement part:
 ```yaml
 type: mapping
 id: mapping--ogrl-ac-01_to_nist-sp-800-53-r5-ac-2_part_a
-spec_version: 0.1.0
+spec_version: 0.2.0
 created: 2026-11-08T00:00:00Z
 modified: 2026-11-08T00:00:00Z
 source_ref: control--ogrl-ac-01
@@ -491,7 +505,7 @@ A `baseline` defines the scope of a compliance program: the frameworks in scope,
 ```yaml
 type: baseline
 id: baseline--soc2-s-a-c-pi
-spec_version: 0.1.0
+spec_version: 0.2.0
 created: 2026-11-08T00:00:00Z
 modified: 2026-11-08T00:00:00Z
 name: SOC 2 Security, Availability, Confidentiality, and Processing Integrity
@@ -517,7 +531,7 @@ A baseline may list requirements with no `control_refs` (for example, when boots
 ```yaml
 type: baseline
 id: baseline--com.acme.soc2-2026
-spec_version: 0.1.0
+spec_version: 0.2.0
 created: 2026-11-08T00:00:00Z
 modified: 2026-11-08T00:00:00Z
 name: Acme SOC 2, with badge access
@@ -561,20 +575,22 @@ Library test example:
 
 ```yaml
 type: test
-id: test--ogrl-ac-01-unique-idp-users
-spec_version: 0.1.0
+id: test--ogrl-ac-01-lifecycle
+spec_version: 0.2.0
 created: 2026-11-08T00:00:00Z
 modified: 2026-11-08T00:00:00Z
-name: Active IdP users are unique
+name: Verify Account Provisioning Approvals and Termination Revocation
 control_ref: control--ogrl-ac-01
 objective_refs:
-  - requirement--nist-sp-800-53-r5-ac-2#obj.a
+  - requirement--nist-sp-800-53-r5-ac-2#obj.e
+  - requirement--nist-sp-800-53-r5-ac-2#obj.h.2
 method: automated                  # automated | manual
-interval: monthly
+interval: daily
 required: true
 description: >
-  Fail if two active users share an employee identifier, or if an
-  active user has no identifier.
+  Confirm newly provisioned accounts have linked approval tickets and
+  all terminated personnel accounts were disabled within the configured
+  deprovisioning SLA.
 ```
 
 Organization test fulfilling the library check:
@@ -582,38 +598,39 @@ Organization test fulfilling the library check:
 ```yaml
 type: test
 id: test--9f1c2d3e-4a5b-4c6d-8e7f-001122334455
-spec_version: 0.1.0
+spec_version: 0.2.0
 created: 2026-11-08T00:00:00Z
 modified: 2026-11-08T00:00:00Z
 name: Active IdP users are unique
 control_ref: control--ogrl-ac-01
-fulfills_ref: test--ogrl-ac-01-unique-idp-users
+fulfills_ref: test--ogrl-ac-01-lifecycle
 method: automated
-interval: monthly
+interval: daily
 description: >
-  Export workforce users from the IdP and fail when two active
-  users share an employee identifier.
+  Query the IdP and ITSM for provisioning and termination events and
+  fail when approval links or deprovisioning SLAs are missing.
 run:
   runner: shell
   timeout: 5m
   env:
     - IDP_TENANT
+    - ITSM_API_TOKEN
   command: |
     set -eu
-    ./checks/unique-idp-users.sh
+    ./checks/account-lifecycle.sh
   evidence:
-    - path: idp-users.json
-      name: IdP user export
+    - path: lifecycle-report.json
+      name: Account lifecycle check export
       media_type: application/json
 ```
 
-**Runners.** Version `0.1.0` specifies three runners. `shell` executes an organization-authored script. `rule` and `integration` evaluate vendor state collected by an integration (see [Snapshots](#snapshots) below). The `runner` field is an open token so future revisions can introduce additional runners without changing the envelope. If a harness encounters an unrecognized `runner`, it must preserve the object, skip execution, and record a `result` with `outcome: error`.
+**Runners.** Version `0.2.0` specifies three runners. `shell` executes an organization-authored script. `rule` and `integration` evaluate vendor state collected by an integration (see [Snapshots](#snapshots) below). The `runner` field is an open token so future revisions can introduce additional runners without changing the envelope. If a harness encounters an unrecognized `runner`, it must preserve the object, skip execution, and record a `result` with `outcome: error`.
 
 **The `run` block (`runner: shell`).**
 
 | Field | Required | Meaning |
 |---|---|---|
-| `runner` | Yes | `shell` in `0.1.0`. |
+| `runner` | Yes | `shell` (one of the three runners defined in `0.2.0`). |
 | `command` | Yes | Shell script body written to a file and executed via `sh`. |
 | `timeout` | No | Positive integer followed by `s` or `m`. Defaults to `5m`; maximum `60m`. |
 | `env` | No | List of environment variable *names* required by the script. Values are never stored in the object. |
@@ -685,7 +702,7 @@ A `rule` run evaluates [Common Expression Language](https://github.com/google/ce
 ```yaml
 type: test
 id: test--5b8e1f0a-2c3d-4e5f-8a9b-0c1d2e3f4a5b
-spec_version: 0.1.0
+spec_version: 0.2.0
 created: 2026-11-21T00:00:00Z
 modified: 2026-11-21T00:00:00Z
 name: Every active Okta user is enrolled in MFA
@@ -753,7 +770,7 @@ An `integration` run hands snapshots to a check written in code and shipped by a
 ```yaml
 type: test
 id: test--8c2d4e6f-1a3b-4c5d-9e7f-a0b1c2d3e4f5
-spec_version: 0.1.0
+spec_version: 0.2.0
 created: 2026-11-21T00:00:00Z
 modified: 2026-11-21T00:00:00Z
 name: Production branches require review and passing checks
@@ -796,7 +813,7 @@ A `party` represents any person, team, role, or external organization that owns,
 ```yaml
 type: party
 id: party--0d4e1c2b-3a49-4e6d-8c8b-9a0f1e2d3c4b
-spec_version: 0.1.0
+spec_version: 0.2.0
 created: 2026-11-08T00:00:00Z
 modified: 2026-11-08T00:00:00Z
 name: Security lead
@@ -816,7 +833,7 @@ A component is an architectural unit, not a CMDB asset—it carries no serial nu
 ```yaml
 type: component
 id: component--a1b2c3d4-e5f6-4781-92a3-b4c5d6e7f809
-spec_version: 0.1.0
+spec_version: 0.2.0
 created: 2026-11-08T00:00:00Z
 modified: 2026-11-08T00:00:00Z
 name: Corporate IdP
@@ -835,7 +852,7 @@ A `system` captures the structural description of an in-scope environment—equi
 ```yaml
 type: system
 id: system--3fa85f64-5717-4562-b3fc-2c963f66afa6
-spec_version: 0.1.0
+spec_version: 0.2.0
 created: 2026-11-08T00:00:00Z
 modified: 2026-11-08T00:00:00Z
 name: Customer production environment
@@ -875,7 +892,7 @@ A `program` binds a single `system` to a single `baseline`, allowing one system 
 ```yaml
 type: program
 id: program--7c9e6679-7425-40de-944b-e07fc1f90ae7
-spec_version: 0.1.0
+spec_version: 0.2.0
 created: 2026-11-08T00:00:00Z
 modified: 2026-11-08T00:00:00Z
 name: 2026 SOC 2
@@ -898,7 +915,7 @@ An `implementation` describes how a specific system or component satisfies a con
 ```yaml
 type: implementation
 id: implementation--2f1e0c3a-7b4d-4e5f-9a6b-1c2d3e4f5a6b
-spec_version: 0.1.0
+spec_version: 0.2.0
 created: 2026-11-08T00:00:00Z
 modified: 2026-11-08T00:00:00Z
 system_ref: system--3fa85f64-5717-4562-b3fc-2c963f66afa6
@@ -927,7 +944,7 @@ narrative: >
 | `customer` | The organization's downstream customers are responsible for the control. | The importing organization is solely responsible for implementing the control. |
 | `subservice` | An upstream subservice party (`subservice_ref`) implements the control. | A subservice party relied on by the provider implements the control. |
 
-`customer` and `subservice` express SOC 2 complementary user-entity / subservice controls and CMMC shared-responsibility matrices. Whenever `responsibility` is `subservice`, `subservice_ref` must identify that party.
+`customer` and `subservice` express SOC 2 complementary user-entity / subservice controls and CMMC shared-responsibility matrices. On an `origin: organization` implementation, whenever `responsibility` is `subservice`, `subservice_ref` must identify that party; provider-authored rows may omit `subservice_ref` when the subservice is implicit in the published bundle.
 
 An organization never edits an imported `origin: provider` row directly; to fulfill its half of a shared control or override an inherited statement, it authors a separate `origin: organization` implementation.
 
@@ -945,20 +962,18 @@ A `result` records the outcome of a single execution of a `test` against an `imp
 ```yaml
 type: result
 id: result--6ba7b810-9dad-11d1-80b4-00c04fd430c8
-spec_version: 0.1.0
+spec_version: 0.2.0
 created: 2026-11-08T17:00:00Z
 modified: 2026-11-08T17:00:00Z
-test_ref: test--ogrl-ac-01-unique-idp-users
+test_ref: test--ogrl-ac-01-lifecycle
 implementation_ref: implementation--2f1e0c3a-7b4d-4e5f-9a6b-1c2d3e4f5a6b
 observed: 2026-11-08T17:00:00Z
 outcome: pass                      # pass | fail | error | skip
-summary: 418 active users, each with a distinct employee id.
-subjects:
-  - kind: account
-    name: alice@company.com
-    external_id: "100231"
+summary: 3 new accounts approved; 0 overdue terminations in the last 24h.
+subjects: []
 objective_refs:
-  - requirement--nist-sp-800-53-r5-ac-2#obj.a
+  - requirement--nist-sp-800-53-r5-ac-2#obj.e
+  - requirement--nist-sp-800-53-r5-ac-2#obj.h.2
 evidence_refs:
   - evidence--6ba7b811-9dad-11d1-80b4-00c04fd430c8
 ```
@@ -974,7 +989,7 @@ A `finding` records a human assessor's formal determination against a single req
 ```yaml
 type: finding
 id: finding--c0ffee00-9dad-11d1-80b4-00c04fd430c8
-spec_version: 0.1.0
+spec_version: 0.2.0
 created: 2026-11-08T00:00:00Z
 modified: 2026-11-08T00:00:00Z
 name: Account types are defined
@@ -1004,7 +1019,7 @@ An `evidence` object references a supporting artifact by URI and cryptographic h
 ```yaml
 type: evidence
 id: evidence--6ba7b811-9dad-11d1-80b4-00c04fd430c8
-spec_version: 0.1.0
+spec_version: 0.2.0
 created: 2026-11-08T17:05:00Z
 modified: 2026-11-08T17:05:00Z
 name: IdP user export, 2026-11-08
@@ -1043,7 +1058,7 @@ A `policy` pairs an organization's formally adopted governance document (stored 
 ```yaml
 type: policy
 id: policy--1a2b3c4d-5e6f-4781-92a3-b4c5d6e7f809
-spec_version: 0.1.0
+spec_version: 0.2.0
 created: 2026-01-15T00:00:00Z
 modified: 2026-01-15T00:00:00Z
 name: Access Control Policy
@@ -1071,7 +1086,7 @@ A `procedure` documents the repeatable operational steps people follow to carry 
 ```yaml
 type: procedure
 id: procedure--9c858901-8a57-4791-81fe-4c455b099bc9
-spec_version: 0.1.0
+spec_version: 0.2.0
 created: 2026-01-15T00:00:00Z
 modified: 2026-01-15T00:00:00Z
 name: Quarterly access review
@@ -1116,7 +1131,7 @@ Objects store only the numeric scores. Tools derive qualitative severity bands c
 ```yaml
 type: risk
 id: risk--b7e23ec2-8b7b-4c3a-9f4e-1d5a6c7e8f90
-spec_version: 0.1.0
+spec_version: 0.2.0
 created: 2026-11-08T00:00:00Z
 modified: 2026-11-08T00:00:00Z
 name: Shared production admin credential
@@ -1153,7 +1168,7 @@ An `exception` represents a time-bounded, formally approved waiver of a control 
 ```yaml
 type: exception
 id: exception--c5d24601-86f7-4e1a-9b2c-3d4e5f607182
-spec_version: 0.1.0
+spec_version: 0.2.0
 created: 2026-11-08T00:00:00Z
 modified: 2026-11-08T00:00:00Z
 implementation_ref: implementation--2f1e0c3a-7b4d-4e5f-9a6b-1c2d3e4f5a6b
@@ -1192,6 +1207,7 @@ A valid OGRL bundle must satisfy all of the following structural invariants:
 - Every `implementation` must set `system_ref`, `component_ref`, or both, and must set `control_ref`, `requirement_ref`, or both.
 - `implementation.origin` is `organization` (default) or `provider`.
 - Provider bundles authored in OGRL YAML must include `customer_responsibility` whenever `origin: provider` and `responsibility` is `shared` or `customer`. (Imported OSCAL component definitions that do not separate customer sentences may omit it, though the control still does not meet.)
+- Organization-authored implementations with `responsibility: subservice` must set `subservice_ref`. Provider rows may omit it.
 - Uniqueness of active implementations: at most one non-revoked implementation may exist per `(system, control)` with no `component_ref`, per `(component, control)` with no `system_ref`, and per `(system, component, control)`.
 - Every `component_ref` inside `system.information_types[].component_refs` must appear in that system's `component_refs`.
 - `authorization` is permitted only on a `system.parties[]` entry with `role: subservice`, and requires `identifier`, `authorized`, and `expires`.
@@ -1410,7 +1426,7 @@ Any conforming tool that **writes** OGRL objects must additionally:
 - Refuse to mint IDs in the reserved standard-library slug namespace.
 - Advance `modified` strictly forward on every mutation, and only when acting as the object's producer (save for the projection-revocation exception in [Section 5](#5-principles)).
 - Preserve unknown fields and `extensions` without loss.
-- Emit canonical JSON accepted by any other `0.1.0` reader (YAML authoring support is optional for pure API servers).
+- Emit canonical JSON accepted by any other `0.2.0` reader (YAML authoring support is optional for pure API servers).
 
 Tools may maintain internal database columns for indexing and querying, but internal fields become part of the OGRL language only when serialized into defined schema fields or under `extensions`.
 
@@ -1432,7 +1448,7 @@ Tools may maintain internal database columns for indexing and querying, but inte
 
 The body of this RFC fixes a concrete default for each item below so the model is implementable today, but these design points warrant close scrutiny during review:
 
-1. **Derived mapping IDs:** Standard-library mappings currently use readable derived IDs (`mapping--ogrl-ac-01_to_soc2-tsc-2017-cc6.1`), which make filenames predictable and duplicates immediately obvious, at the cost of long IDs and a breaking migration if the naming scheme ever changes. The alternative is opaque UUIDs relying solely on `source_ref` and `target_ref`.
+1. **Derived mapping IDs (resolved):** Standard-library mappings use readable derived IDs per [Section 6.3](#63-identifiers) (`_to_` and `_part_` joins, preserving dots in SOC 2 and other upstream identifiers). The library is migrating legacy `-to-` filenames to this form; opaque UUIDs remain available for organization-authored mappings.
 2. **Risk matrix calibration:** The 5×5 scoring anchors and severity bands (`low` through `critical`) in [Section 7.17](#717-risk) provide cross-register consistency, but should be validated with practitioners who run enterprise risk committees.
 3. **In-scope responsibilities:** Organization-authored `customer` and `subservice` implementations currently resolve to `out-of-scope` because the work is not the organization's to test. Alternatives include introducing a fifth carved-out state distinct from `not-applicable`, or letting a program specify `in_scope_responsibilities` if it wants organization-authored `shared` controls to remain unmet until both halves pass tests.
 4. **Fragment syntax for requirement parts:** URI fragments (`requirement--…-ac-2#a`) keep part identifiers concise and local, at the trade-off that references are not always bare object IDs. Promoting every part to a top-level ID would normalize reference syntax while multiplying object counts.
