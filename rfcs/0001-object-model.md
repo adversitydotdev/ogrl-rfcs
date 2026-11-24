@@ -14,6 +14,7 @@
 - Added automated test runners `rule` (CEL over integration snapshots) and `integration` (versioned integration checks), including the snapshot source grammar, harness contracts, and CEL helper `days()`.
 - Added the `pr` (privacy) standard control family.
 - Clarified that `bundle` is a packaging manifest outside the Section 7 graph type set.
+- Aligned standard-library example IDs with ogrl-library `main` (§6.3 derived `_to_` / `_part_` forms).
 
 ### 0.1.0 (2026-11-08)
 
@@ -149,8 +150,8 @@ Two namespaces exist for minting IDs:
 **Derived mapping IDs.** Standard-library mappings derive their IDs from their endpoints so each pair corresponds deterministically to one file (dots inside a part ID become hyphens after `_part_`):
 
 ```text
-mapping--ogrl-ac-01_to_soc2-tsc-2017-cc6.1
-mapping--ogrl-ac-01_to_nist-sp-800-53-r5-ac-2_part_a
+mapping--ogrl-ac-04_to_soc2-tsc-2017-cc6.1
+mapping--ogrl-ac-01_to_nist-sp-800-53-r5-ac-2_part_e
 ```
 
 Organization-authored mappings use UUIDs or domain-prefixed slugs like any other organization object; the uniqueness rule in [Section 7.20](#720-graph-constraints) enforces one mapping per pair without relying on derived IDs.
@@ -405,37 +406,36 @@ A `mapping` is the sole mechanism for crosswalks in OGRL. `source_ref` points to
 
 ```yaml
 type: mapping
-id: mapping--ogrl-ac-01_to_soc2-tsc-2017-cc6.1
+id: mapping--ogrl-ac-04_to_soc2-tsc-2017-cc6.1
 spec_version: 0.2.0
 created: 2026-11-08T00:00:00Z
 modified: 2026-11-08T00:00:00Z
-source_ref: control--ogrl-ac-01
+source_ref: control--ogrl-ac-04
 target_ref: requirement--soc2-tsc-2017-cc6.1
 relationship: intersects-with
 rationale: functional
 review_status: reviewed
-confidence: high
+confidence: medium
 summary: >
-  Unique identities are necessary for CC6.1. Removal, reviews,
-  and authentication are other controls.
+  Default-deny network restrictions form part of the logical access
+  security architecture in CC6.1.
 ```
 
 Targeting a specific statement part:
 
 ```yaml
 type: mapping
-id: mapping--ogrl-ac-01_to_nist-sp-800-53-r5-ac-2_part_a
+id: mapping--ogrl-ac-01_to_nist-sp-800-53-r5-ac-2_part_e
 spec_version: 0.2.0
 created: 2026-11-08T00:00:00Z
 modified: 2026-11-08T00:00:00Z
 source_ref: control--ogrl-ac-01
-target_ref: requirement--nist-sp-800-53-r5-ac-2#a
-relationship: subset-of
+target_ref: requirement--nist-sp-800-53-r5-ac-2#e
+relationship: equivalent-to
 rationale: functional
 review_status: reviewed
 summary: >
-  Covers identification of account types and owners.
-  Review of accounts is a different control.
+  Pre-provisioning account approval directly satisfies NIST AC-2(e).
 ```
 
 **Relationship vocabulary.** OGRL adopts the OSCAL mapping relationship vocabulary, always read from `source_ref` relative to `target_ref` (so `subset-of` from `control--ogrl-ac-01` to `AC-2#a` means the control covers only part of `AC-2(a)`):
@@ -465,13 +465,13 @@ Coverage is derived directly from `relationship` rather than stored in a separat
 
 ```yaml
 type: mapping
-id: mapping--ogrl-ac-01_to_nist-sp-800-53-r5-ac-2_part_a
-source_ref: control--ogrl-ac-01
-target_ref: requirement--nist-sp-800-53-r5-ac-2#a
-relationship: subset-of
+id: mapping--ogrl-ps-02_to_nist-sp-800-171-r2-3-10-1
+source_ref: control--ogrl-ps-02
+target_ref: requirement--nist-sp-800-171-r2-3-10-1
+relationship: intersects-with
 review_status: reviewed
 combined_with_refs:
-  - mapping--ogrl-ac-02_to_nist-sp-800-53-r5-ac-2_part_a
+  - mapping--ogrl-ps-01_to_nist-sp-800-171-r2-3-10-1
 ```
 
 The mapping carrying `combined_with_refs` together with all referenced mappings forms a **combined set** asserting that their sources, taken jointly, are `equal-to` or `superset-of` the target. Every member must share the same `target_ref`, have a `control` as its `source_ref`, and carry `subset-of` or `intersects-with`. Each member retains its own individual `relationship` (so viewed alone it still reports as a contribution), and the combined set counts toward coverage only when every member is reviewed (see [Section 8](#8-computed-status)).
@@ -483,9 +483,9 @@ The mapping carrying `combined_with_refs` together with all referenced mappings 
 **Parameter bindings (`parameter_map`).** When a target requirement contains organization-defined parameters, the mapping whose target uses each parameter can bind that parameter key to a parameter name on the source control:
 
 ```yaml
-# on mapping--ogrl-ac-04_to_nist-sp-800-53-r5-ac-2_part_j
+# on mapping--ogrl-ac-02_to_nist-sp-800-53-r5-ac-2_part_j
 parameter_map:
-  ac_02_odp_10: access_review_frequency
+  ac_02_odp_10: review_cadence
 ```
 
 Target requirement parameters resolve in precedence order, highest first:

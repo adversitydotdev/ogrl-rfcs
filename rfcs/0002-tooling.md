@@ -3,10 +3,20 @@
 | Field | Value |
 |---|---|
 | Status | Draft |
-| Spec version | 0.1.0 |
-| Date | 2026-11-08 |
+| Spec version | 0.1.1 |
+| Date | 2026-11-21 |
 | AI assistance | Drafted and edited with AI tools; human review in progress (see [README](https://github.com/adversitydotdev/ogrl-rfcs#ai-assistance)) |
 | Depends on | [RFC 0001](0001-object-model.md) |
+
+## Changelog
+
+### 0.1.1 (2026-11-21)
+
+- Refresh §10 tooling inventory to point at current [`ogrl-rs`](https://github.com/adversitydotdev/ogrl-rs/releases) and [`ogrl-library`](https://github.com/adversitydotdev/ogrl-library/tags) release tags and describe published frameworks and CMMC baselines at a high level.
+
+### 0.1.0 (2026-11-08)
+
+- Initial draft: authority boundaries, library pulls, mapping reviews, provider bundles, Git snapshots, restore, and OSCAL export.
 
 While [RFC 0001](0001-object-model.md) defines the OGRL object model, an interoperable language only works if tools agree on where objects live, who owns each copy, and how data flows between Git, operational databases, external providers, and federal OSCAL exports. This RFC establishes those ownership boundaries and lifecycle contracts. Open design questions are collected in [Section 11](#11-open-questions).
 
