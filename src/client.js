@@ -19,7 +19,8 @@
     });
   }
 
-  // GitHub star count (cached 1h to stay under the unauthenticated API rate limit)
+  // GitHub star count: paint last-known value instantly, then refresh on every load.
+  // GitHub sends max-age=60, so the browser HTTP cache keeps us well under the 60 req/h anon limit.
   const ghBtn = document.querySelector("[data-gh-repo]");
   if (ghBtn) {
     const repo = ghBtn.dataset.ghRepo;
@@ -38,18 +39,16 @@
       cached = JSON.parse(localStorage.getItem(cacheKey) || "null");
     } catch (e) {}
     if (cached && typeof cached.n === "number") show(cached.n);
-    if (!cached || Date.now() - cached.t > 3600000) {
-      fetch(`https://api.github.com/repos/${repo}`, { headers: { Accept: "application/vnd.github+json" } })
-        .then((r) => (r.ok ? r.json() : null))
-        .then((d) => {
-          if (!d || typeof d.stargazers_count !== "number") return;
-          show(d.stargazers_count);
-          try {
-            localStorage.setItem(cacheKey, JSON.stringify({ n: d.stargazers_count, t: Date.now() }));
-          } catch (e) {}
-        })
-        .catch(() => {});
-    }
+    fetch(`https://api.github.com/repos/${repo}`, { headers: { Accept: "application/vnd.github+json" } })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (!d || typeof d.stargazers_count !== "number") return;
+        show(d.stargazers_count);
+        try {
+          localStorage.setItem(cacheKey, JSON.stringify({ n: d.stargazers_count, t: Date.now() }));
+        } catch (e) {}
+      })
+      .catch(() => {});
   }
 
   // Copy buttons on code blocks
